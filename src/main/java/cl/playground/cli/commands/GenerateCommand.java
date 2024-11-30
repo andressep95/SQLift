@@ -4,6 +4,7 @@ import cl.playground.config.model.SqliftConfig;
 import cl.playground.config.reader.YamlConfigReader;
 import cl.playground.core.reader.SqlReader;
 import cl.playground.exception.ConfigurationException;
+import cl.playground.generator.EntityGenerator;
 import cl.playground.util.LogContent;
 import picocli.CommandLine.Command;
 
@@ -41,6 +42,15 @@ public class GenerateCommand implements Runnable {
             // Leer y mostrar el contenido SQL
             String sqlContent = SqlReader.readSql((String) context.get("schema"));
             LogContent.logSqlContent(sqlContent);
+
+            // Agregar el contenido SQL al contexto
+            context.put("sqlContent", sqlContent);
+
+            // Generar las entidades
+            System.out.println("\n🔨 Generating entities...");
+            EntityGenerator generator = new EntityGenerator();
+            generator.generateEntities(context);
+            System.out.println("✅ Entities generated successfully!");
 
         } catch (Exception e) {
             System.err.println("❌ Error: " + e.getMessage());
