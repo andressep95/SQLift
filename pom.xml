@@ -43,7 +43,7 @@
             </goals>
             <phase>package</phase>
             <configuration>
-              <imageName>SQLift</imageName> <!-- Nombre del ejecutable -->
+              <imageName>sqlift</imageName> <!-- Nombre del ejecutable -->
               <mainClass>cl.playground.cli.CommandLineApp</mainClass> <!-- Clase principal -->
             </configuration>
           </execution>
@@ -105,7 +105,7 @@
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.3.0</version>
         <configuration>
-          <finalName>SQLift</finalName>
+          <finalName>sqlift</finalName>
           <archive>
             <manifest>
               <mainClass>cl.playground.cli.CommandLineApp</mainClass>
