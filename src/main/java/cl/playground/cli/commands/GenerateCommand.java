@@ -2,7 +2,9 @@ package cl.playground.cli.commands;
 
 import cl.playground.config.model.SqliftConfig;
 import cl.playground.config.reader.YamlConfigReader;
+import cl.playground.core.reader.SqlReader;
 import cl.playground.exception.ConfigurationException;
+import cl.playground.util.LogContent;
 import picocli.CommandLine.Command;
 
 import java.io.File;
@@ -34,7 +36,11 @@ public class GenerateCommand implements Runnable {
             Map<String, Object> context = extractConfigContext(yamlFile.getPath());
 
             // Mostrar la configuración leída
-            logConfiguration(context);
+            LogContent.logConfiguration(context);
+
+            // Leer y mostrar el contenido SQL
+            String sqlContent = SqlReader.readSql((String) context.get("schema"));
+            LogContent.logSqlContent(sqlContent);
 
         } catch (Exception e) {
             System.err.println("❌ Error: " + e.getMessage());
@@ -56,14 +62,5 @@ public class GenerateCommand implements Runnable {
         context.put("useJpa", config.getSql().getOutput().getOptions().isJpa());
 
         return context;
-    }
-
-    private void logConfiguration(Map<String, Object> context) {
-        System.out.println("📝 Configuration loaded:");
-        System.out.println("  - Engine: " + context.get("engine"));
-        System.out.println("  - Schema: " + context.get("schema"));
-        System.out.println("  - Output Package: " + context.get("outputPackage"));
-        System.out.println("  - Lombok: " + context.get("useLombok"));
-        System.out.println("  - JPA: " + context.get("useJpa"));
     }
 }
