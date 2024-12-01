@@ -1,20 +1,29 @@
 package cl.playground.core.util;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class TypeMapper {
+    private static final List<String> IGNORED_SQL_TYPES = Arrays.asList(
+            "key", "primary", "foreign", "null", "default", "constraint",
+            "references", "check", "unique", "current_timestamp"
+    );
+
     private static final Map<String, String> POSTGRES_TYPE_MAP = new HashMap<>();
 
     static {
         // Tipos numéricos
-        POSTGRES_TYPE_MAP.put("serial", "Long");
+        POSTGRES_TYPE_MAP.put("serial", "Integer");
         POSTGRES_TYPE_MAP.put("bigserial", "Long");
         POSTGRES_TYPE_MAP.put("int", "Integer");
         POSTGRES_TYPE_MAP.put("integer", "Integer");
         POSTGRES_TYPE_MAP.put("bigint", "Long");
-        POSTGRES_TYPE_MAP.put("numeric", "BigDecimal");
-        POSTGRES_TYPE_MAP.put("decimal", "BigDecimal");
+        POSTGRES_TYPE_MAP.put("numeric", "java.math.BigDecimal");
+        POSTGRES_TYPE_MAP.put("decimal", "java.math.BigDecimal");
+        POSTGRES_TYPE_MAP.put("real", "Float");
+        POSTGRES_TYPE_MAP.put("double precision", "Double");
 
         // Tipos de texto
         POSTGRES_TYPE_MAP.put("varchar", "String");
@@ -25,29 +34,53 @@ public class TypeMapper {
         POSTGRES_TYPE_MAP.put("timestamp", "java.time.LocalDateTime");
         POSTGRES_TYPE_MAP.put("date", "java.time.LocalDate");
         POSTGRES_TYPE_MAP.put("time", "java.time.LocalTime");
+
+        // Tipos booleanos
+        POSTGRES_TYPE_MAP.put("boolean", "Boolean");
+        POSTGRES_TYPE_MAP.put("bool", "Boolean");
     }
 
-    public static String mapPostgresType(String sqlType) {
+    public static String mapPostgresType(String sqlType, String columnName, boolean isForeignKey) {
+        if (isIgnoredSqlType(sqlType)) {
+            return null;
+        }
+
+        // Si es una foreign key, usar el nombre de la entidad
+        if (isForeignKey) {
+            String entityName = columnName.replace("_id", "");
+            return toPascalCase(entityName);
+        }
+
+        // Para tipos normales
         String baseType = sqlType.toLowerCase().split("\\s+")[0];
-        String mappedType = POSTGRES_TYPE_MAP.get(baseType);
+        String javaType = POSTGRES_TYPE_MAP.get(baseType);
 
-        if (mappedType != null) {
-            return mappedType;
+        if (javaType == null) {
+            // Verificar si es una referencia a clase (empieza con mayúscula)
+            if (Character.isUpperCase(sqlType.charAt(0))) {
+                return sqlType;
+            }
+            System.out.println("Tipo SQL no reconocido: " + sqlType + ". Usando Object por defecto.");
+            return "Object";
         }
 
-        // Si es una referencia a otra entidad, usar el tipo de la entidad
-        if (baseType.endsWith("_id")) {
-            String referencedEntity = baseType.substring(0, baseType.length() - 3);
-            return toPascalCase(referencedEntity);
-        }
-
-        return "Object";
+        return javaType;
     }
 
-    private static String toPascalCase(String input) {
+    private static boolean isIgnoredSqlType(String sqlType) {
+        return IGNORED_SQL_TYPES.contains(sqlType.toLowerCase());
+    }
+
+    public static String toPascalCase(String input) {
         if (input == null || input.isEmpty()) {
             return input;
         }
+
+        // Manejar el caso de plural
+        if (input.endsWith("s")) {
+            input = input.substring(0, input.length() - 1);
+        }
+
         String[] parts = input.split("_");
         StringBuilder result = new StringBuilder();
 
@@ -59,5 +92,10 @@ public class TypeMapper {
         }
 
         return result.toString();
+    }
+
+    // Método para agregar mapeos personalizados si es necesario
+    public static void addCustomMapping(String sqlType, String javaType) {
+        POSTGRES_TYPE_MAP.put(sqlType.toLowerCase(), javaType);
     }
 }

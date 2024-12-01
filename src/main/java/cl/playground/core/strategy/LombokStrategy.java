@@ -2,7 +2,7 @@ package cl.playground.core.strategy;
 
 import cl.playground.core.model.ColumnDefinition;
 
-public class LombokStrategy implements EntityStrategy{
+public class LombokStrategy implements EntityStrategy {
     @Override
     public String addImports() {
         return "import lombok.Getter;\n" +
@@ -20,7 +20,7 @@ public class LombokStrategy implements EntityStrategy{
     }
 
     @Override
-    public String addFieldAnnotations(ColumnDefinition column) {
+    public String addFieldAnnotations(ColumnDefinition column, boolean isForeignKey, boolean isPrimaryKey) {
         return ""; // Lombok no necesita anotaciones en campos
     }
 }

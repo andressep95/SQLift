@@ -1,84 +1,64 @@
 package cl.playground.core.model;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class ClassDefinition {
-    private String className;
-    private String packageName;
-    private String tableName;  // Agregar esto
-    private Set<String> imports;
-    private List<ColumnDefinition> columns;
 
-    public ClassDefinition() {
+    private final String className;
+    private final String packageName;
+    private ColumnDefinition primaryKey;
+    private final List<ColumnDefinition> attributes;
+    private final List<ForeignKeyDefinition> foreignKeys;
+    private final Set<String> imports;
+
+    public ClassDefinition(String className, String packageName) {
+        this.className = className;
+        this.packageName = packageName;
+        this.attributes = new ArrayList<>();
+        this.foreignKeys = new ArrayList<>();
         this.imports = new HashSet<>();
-        this.columns = new ArrayList<>();
     }
 
     public String getClassName() {
         return className;
     }
 
-    public void setClassName(String className) {
-        this.className = className;
-    }
-
     public String getPackageName() {
         return packageName;
     }
 
-    public void setPackageName(String packageName) {
-        this.packageName = packageName;
+    public ColumnDefinition getPrimaryKey() {
+        return primaryKey;
     }
 
-    public String getTableName() {
-        return tableName;
+    public void setPrimaryKey(ColumnDefinition primaryKey) {
+        this.primaryKey = primaryKey;
     }
 
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
+    public void addAttribute(ColumnDefinition column) {
+        this.attributes.add(column);
     }
 
-    public Set<String> getImports() {
-        return imports;
+    public void addForeignKey(ForeignKeyDefinition foreignKey) {
+        this.foreignKeys.add(foreignKey);
     }
 
     public void addImport(String importStatement) {
         this.imports.add(importStatement);
     }
 
-    public List<ColumnDefinition> getColumns() {
-        return columns;
+    public List<ColumnDefinition> getAttributes() {
+        return attributes;
     }
 
-    public void addColumn(ColumnDefinition column) {
-        this.columns.add(column);
+    public List<ForeignKeyDefinition> getForeignKeys() {
+        return foreignKeys;
     }
 
-    public void setColumns(List<ColumnDefinition> columns) {
-        this.columns = columns;
-    }
-
-    // Método para obtener columnas en orden específico
-    public List<ColumnDefinition> getOrderedColumns() {
-        // Ordenar columnas: primero ID, luego foreign keys, luego el resto
-        List<ColumnDefinition> orderedColumns = new ArrayList<>();
-
-        // Primero agregar ID
-        columns.stream()
-                .filter(ColumnDefinition::isPrimaryKey)
-                .findFirst()
-                .ifPresent(orderedColumns::add);
-
-        // Luego agregar foreign keys
-        columns.stream()
-                .filter(c -> c.isForeignKey() && !c.isPrimaryKey())
-                .forEach(orderedColumns::add);
-
-        // Finalmente agregar el resto
-        columns.stream()
-                .filter(c -> !c.isPrimaryKey() && !c.isForeignKey())
-                .forEach(orderedColumns::add);
-
-        return orderedColumns;
+    public Set<String> getImports() {
+        return imports;
     }
 }

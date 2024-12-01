@@ -1,13 +1,9 @@
 package cl.playground.core.engine;
 
-import cl.playground.core.model.ColumnDefinition;
-import cl.playground.core.model.TableDefinition;
-
-import java.util.List;
+import cl.playground.core.model.ClassDefinition;
 import java.util.Map;
 
 public interface DatabaseEngine {
-    List<TableDefinition> parseTables(String sqlContent);
-    Map<String, ColumnDefinition> parseColumns(String tableContent);
-    String mapDataType(String sqlType);
+    Map<String, ClassDefinition> mapSqlToClassDefinitions(String sqlContent, String basePackage);
+    String mapDataType(String sqlType, String columnName, boolean isForeignKey);
 }
