@@ -65,10 +65,10 @@ jobs:
         run: |
           native-image --no-fallback \
             -H:+ReportExceptionStackTraces \
-            -H:Name=sqlift-macos-arm64 \
+            -H:Name=${{ matrix.output_name }} \
             --initialize-at-build-time=cl.playground.cli.CommandLineApp \
             --initialize-at-build-time=picocli \
-            --target aarch64-darwin \
+            --arch=aarch64 \
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
 
