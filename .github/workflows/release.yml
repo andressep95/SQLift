@@ -11,18 +11,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
             output_name: sqlift-linux-x64
           - os: macos-latest
             output_name: sqlift-macos-x64
-          # Agregamos la entrada para ARM64
           - os: macos-latest
             output_name: sqlift-macos-arm64
-            arch: arm64
+            extra_args: '--march=arm64'
           - os: windows-latest
             output_name: sqlift-windows-x64
+
 
     steps:
       - uses: actions/checkout@v3
@@ -58,6 +57,7 @@ jobs:
             --initialize-at-build-time=cl.playground.cli.CommandLineApp \
             --initialize-at-build-time=picocli \
             -cp target/sqlift.jar:target/lib/* \
+            ${{ matrix.extra_args || '' }} \
             cl.playground.cli.CommandLineApp
 
       - name: Build Native Image (Windows)
