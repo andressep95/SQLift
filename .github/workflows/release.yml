@@ -32,10 +32,9 @@ jobs:
         with:
           version: 'latest'
           java-version: '17'
-          components: 'native-image'
+          components: 'native-image,llvm-toolchain'
           github-token: ${{ secrets.GITHUB_TOKEN }}
           native-image-job-reports: 'true'
-          cache: 'gradle'
           set-java-home: 'true'
 
       - name: Build with Maven
@@ -62,13 +61,6 @@ jobs:
             --initialize-at-build-time=picocli \
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
-
-      - name: Setup Cross-Compilation for ARM64
-        if: runner.os == 'macOS' && matrix.arch == 'arm64'
-        run: |
-          gu install native-image
-          gu install llvm-toolchain
-          gu install native-image-llvm-backend
 
       - name: Build Native Image (macOS arm64)
         if: runner.os == 'macOS' && matrix.arch == 'arm64'
