@@ -85,10 +85,7 @@ jobs:
             cl.playground.cli.CommandLineApp
 
       - name: List Generated Files
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          Get-ChildItem -Path .
+        run: ls -R
 
       - name: Upload artifact (Windows)
         if: runner.os == 'Windows'
