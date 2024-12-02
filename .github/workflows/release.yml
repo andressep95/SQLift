@@ -11,14 +11,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-14]  # Usamos macos-14
         include:
           - os: ubuntu-latest
             output_name: sqlift-linux-x64
-          - os: macos-latest
+          - os: macos-14  # Usamos el nuevo runner para macOS 14
             arch: x64
             output_name: sqlift-macos-x64
-          - os: macos-latest-xlarge
+          - os: macos-14  # Usamos macOS con arquitectura ARM64
             arch: arm64
             output_name: sqlift-macos-arm64
           - os: windows-latest
@@ -63,7 +63,7 @@ jobs:
             cl.playground.cli.CommandLineApp
 
       - name: Build Native Image (macOS arm64)
-        if: matrix.arch == 'arm64'  # Simplificamos la condición
+        if: matrix.arch == 'arm64'
         run: |
           native-image --no-fallback \
             -H:+ReportExceptionStackTraces \
