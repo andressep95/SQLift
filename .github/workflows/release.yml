@@ -34,6 +34,9 @@ jobs:
           java-version: '17'
           components: 'native-image'
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+          cache: 'gradle'
+          set-java-home: 'true'
 
       - name: Build with Maven
         run: mvn -B package
@@ -60,6 +63,13 @@ jobs:
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
 
+      - name: Setup Cross-Compilation for ARM64
+        if: runner.os == 'macOS' && matrix.arch == 'arm64'
+        run: |
+          gu install native-image
+          gu install llvm-toolchain
+          gu install native-image-llvm-backend
+
       - name: Build Native Image (macOS arm64)
         if: runner.os == 'macOS' && matrix.arch == 'arm64'
         run: |
@@ -68,9 +78,8 @@ jobs:
             -H:Name=${{ matrix.output_name }} \
             --initialize-at-build-time=cl.playground.cli.CommandLineApp \
             --initialize-at-build-time=picocli \
-            -H:+EnableCrossContainerImage \
-            -H:+CrossContainerImage \
-            -H:TargetPlatform=osx-aarch64 \
+            --native-compiler=llvm \
+            --target=aarch64-darwin \
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
 
