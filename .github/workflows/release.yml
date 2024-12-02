@@ -16,6 +16,7 @@ jobs:
           - os: ubuntu-latest
             output_name: sqlift-linux-x64
           - os: macos-latest
+            arch: x64
             output_name: sqlift-macos-x64
           - os: macos-latest
             arch: arm64
@@ -48,8 +49,8 @@ jobs:
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
 
-      - name: Build Native Image (macOS)
-        if: runner.os == 'macOS' && matrix.arch != 'arm64'
+      - name: Build Native Image (macOS x64)
+        if: runner.os == 'macOS' && matrix.arch == 'x64'
         run: |
           native-image --no-fallback \
             -H:+ReportExceptionStackTraces \
@@ -59,7 +60,7 @@ jobs:
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
 
-      - name: Build Native Image (M1/M2)
+      - name: Build Native Image (macOS arm64)
         if: runner.os == 'macOS' && matrix.arch == 'arm64'
         run: |
           native-image --no-fallback \
@@ -67,6 +68,7 @@ jobs:
             -H:Name=sqlift-macos-arm64 \
             --initialize-at-build-time=cl.playground.cli.CommandLineApp \
             --initialize-at-build-time=picocli \
+            --target aarch64-darwin \
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
 
@@ -100,7 +102,6 @@ jobs:
           name: ${{ matrix.output_name }}
           path: |
             ${{ matrix.output_name }}
-            sqlift-macos-arm64
 
   release:
     needs: build
