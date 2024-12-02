@@ -54,6 +54,17 @@ jobs:
             --initialize-at-build-time=picocli \
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
+      - name: Build Native Image (M1/M2)
+        if: runner.os == 'macOS'
+        run: |
+          native-image --no-fallback \
+            -H:+ReportExceptionStackTraces \
+            -H:Name=sqlift-macos-arm64 \
+            --initialize-at-build-time=cl.playground.cli.CommandLineApp \
+            --initialize-at-build-time=picocli \
+            --target aarch64-darwin \
+            -cp target/sqlift.jar:target/lib/* \
+            cl.playground.cli.CommandLineApp
       - name: Build Native Image (Windows)
         if: runner.os == 'Windows'
         shell: powershell
@@ -83,7 +94,9 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.output_name }}
-          path: ${{ matrix.output_name }}
+          path: |
+            ${{ matrix.output_name }}
+            sqlift-macos-arm64
 
   release:
     needs: build
@@ -101,6 +114,7 @@ jobs:
           files: |
             sqlift-linux-x64/sqlift-linux-x64
             sqlift-macos-x64/sqlift-macos-x64
+            sqlift-macos-arm64/sqlift-macos-arm64
             sqlift-windows-x64.exe/sqlift-windows-x64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
