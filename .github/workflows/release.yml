@@ -11,14 +11,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-14]  # Usamos macos-14
+        os: [ubuntu-latest, windows-latest, macos-14]
+        arch: [x64, arm64]
         include:
           - os: ubuntu-latest
             output_name: sqlift-linux-x64
-          - os: macos-14  # Usamos el nuevo runner para macOS 14
+          - os: macos-14
             arch: x64
             output_name: sqlift-macos-x64
-          - os: macos-14  # Usamos macOS con arquitectura ARM64
+          - os: macos-14
             arch: arm64
             output_name: sqlift-macos-arm64
           - os: windows-latest
