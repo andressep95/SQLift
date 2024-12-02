@@ -11,12 +11,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
             output_name: sqlift-linux-x64
           - os: macos-latest
             output_name: sqlift-macos-x64
-            arch: x64
+          # Agregamos la entrada para ARM64
           - os: macos-latest
             output_name: sqlift-macos-arm64
             arch: arm64
@@ -57,38 +58,21 @@ jobs:
             --initialize-at-build-time=cl.playground.cli.CommandLineApp \
             --initialize-at-build-time=picocli \
             -cp target/sqlift.jar:target/lib/* \
-            --native-image-info \
-            -march=${{ matrix.arch }} \
             cl.playground.cli.CommandLineApp
 
       - name: Build Native Image (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          native-image `
-            --no-fallback `
-            -H:+ReportExceptionStackTraces `
-            -H:Name=sqlift-windows-x64 `
-            --initialize-at-build-time=cl.playground.cli.CommandLineApp `
-            --initialize-at-build-time=picocli `
-            "-cp" "target/sqlift.jar;target/lib/*" `
+          native-image --no-fallback ^
+            -H:+ReportExceptionStackTraces ^
+            -H:Name=${{ matrix.output_name }} ^
+            --initialize-at-build-time=cl.playground.cli.CommandLineApp ^
+            --initialize-at-build-time=picocli ^
+            -cp target/sqlift.jar;target/lib/* ^
             cl.playground.cli.CommandLineApp
 
-      - name: List Generated Files
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          Get-ChildItem -Path .
-
-      - name: Upload artifact (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v3
-        with:
-          name: sqlift-windows-x64.exe
-          path: sqlift-windows-x64.exe
-
-      - name: Upload artifact (Linux/MacOS)
-        if: runner.os != 'Windows'
+      - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.output_name }}
@@ -100,9 +84,6 @@ jobs:
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
-
-      - name: List Downloaded Artifacts
-        run: ls -R
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
