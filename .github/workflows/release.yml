@@ -15,11 +15,9 @@ jobs:
         include:
           - os: ubuntu-latest
             output_name: sqlift-linux-x64
-          - os: macos-14
-            arch: x64
+          - os: macos-14-x64
             output_name: sqlift-macos-x64
-          - os: macos-14
-            arch: arm64
+          - os: macos-14-arm64
             output_name: sqlift-macos-arm64
           - os: windows-latest
             output_name: sqlift-windows-x64
@@ -52,7 +50,7 @@ jobs:
             cl.playground.cli.CommandLineApp
 
       - name: Build Native Image (macOS x64)
-        if: runner.os == 'macOS' && matrix.arch == 'x64'
+        if: runner.os == 'macOS' && matrix.os == 'macos-14-x64'
         run: |
           native-image --no-fallback \
             -H:+ReportExceptionStackTraces \
@@ -63,7 +61,7 @@ jobs:
             cl.playground.cli.CommandLineApp
 
       - name: Build Native Image (macOS arm64)
-        if: matrix.arch == 'arm64'
+        if: runner.os == 'macOS' && matrix.os == 'macos-14-arm64'
         run: |
           native-image --no-fallback \
             -H:+ReportExceptionStackTraces \
