@@ -18,7 +18,7 @@ jobs:
           - os: macos-latest
             arch: x64
             output_name: sqlift-macos-x64
-          - os: macos-14
+          - os: macos-latest-xlarge
             arch: arm64
             output_name: sqlift-macos-arm64
           - os: windows-latest
@@ -63,15 +63,13 @@ jobs:
             cl.playground.cli.CommandLineApp
 
       - name: Build Native Image (macOS arm64)
-        if: runner.os == 'macOS' && matrix.os == 'macos-14'
+        if: matrix.arch == 'arm64'  # Simplificamos la condición
         run: |
           native-image --no-fallback \
             -H:+ReportExceptionStackTraces \
             -H:Name=${{ matrix.output_name }} \
             --initialize-at-build-time=cl.playground.cli.CommandLineApp \
             --initialize-at-build-time=picocli \
-            --native-compiler=llvm \
-            --target=aarch64-darwin \
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
 
