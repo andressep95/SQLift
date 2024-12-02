@@ -9,6 +9,7 @@ jobs:
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       matrix:
         include:
@@ -18,7 +19,7 @@ jobs:
             output_name: sqlift-macos-x64
           - os: macos-latest
             output_name: sqlift-macos-arm64
-            extra_args: '--os-arch arm64'
+            extra_args: '--target aarch64-darwin'
           - os: windows-latest
             output_name: sqlift-windows-x64
 
@@ -59,15 +60,14 @@ jobs:
             cl.playground.cli.CommandLineApp
       - name: Build Native Image (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          native-image `
-            --no-fallback `
-            -H:+ReportExceptionStackTraces `
-            -H:Name=sqlift-windows-x64 `
-            --initialize-at-build-time=cl.playground.cli.CommandLineApp `
-            --initialize-at-build-time=picocli `
-            "-cp" "target/sqlift.jar;target/lib/*" `
+          native-image --no-fallback ^
+            -H:+ReportExceptionStackTraces ^
+            -H:Name=sqlift-windows-x64 ^
+            --initialize-at-build-time=cl.playground.cli.CommandLineApp ^
+            --initialize-at-build-time=picocli ^
+            -cp target/sqlift.jar;target/lib/* ^
             cl.playground.cli.CommandLineApp
       - name: List Generated Files
         if: runner.os == 'Windows'
