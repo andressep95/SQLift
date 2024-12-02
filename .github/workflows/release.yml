@@ -67,7 +67,6 @@ jobs:
             -H:Name=sqlift-macos-arm64 \
             --initialize-at-build-time=cl.playground.cli.CommandLineApp \
             --initialize-at-build-time=picocli \
-            --target aarch64-darwin \
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
 
