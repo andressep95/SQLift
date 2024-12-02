@@ -27,21 +27,45 @@ jobs:
         uses: graalvm/setup-graalvm@v1
         with:
           version: 'latest'
-          java-version: '17'  # GraalVM necesita Java 17+
+          java-version: '17'
           components: 'native-image'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build with Maven
         run: mvn -B package
 
-      - name: Build Native Image
+      - name: Build Native Image (Linux)
+        if: runner.os == 'Linux'
         run: |
           native-image --no-fallback \
-            --static \
             -H:+ReportExceptionStackTraces \
             -H:Name=${{ matrix.output_name }} \
             --initialize-at-build-time=cl.playground.cli.CommandLineApp \
+            --initialize-at-build-time=picocli \
             -cp target/sqlift.jar:target/lib/* \
+            cl.playground.cli.CommandLineApp
+
+      - name: Build Native Image (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          native-image --no-fallback \
+            -H:+ReportExceptionStackTraces \
+            -H:Name=${{ matrix.output_name }} \
+            --initialize-at-build-time=cl.playground.cli.CommandLineApp \
+            --initialize-at-build-time=picocli \
+            -cp target/sqlift.jar:target/lib/* \
+            cl.playground.cli.CommandLineApp
+
+      - name: Build Native Image (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          native-image --no-fallback ^
+            -H:+ReportExceptionStackTraces ^
+            -H:Name=${{ matrix.output_name }} ^
+            --initialize-at-build-time=cl.playground.cli.CommandLineApp ^
+            --initialize-at-build-time=picocli ^
+            -cp target/sqlift.jar;target/lib/* ^
             cl.playground.cli.CommandLineApp
 
       - name: Upload artifact
