@@ -68,7 +68,9 @@ jobs:
             -H:Name=${{ matrix.output_name }} \
             --initialize-at-build-time=cl.playground.cli.CommandLineApp \
             --initialize-at-build-time=picocli \
-            --arch=aarch64 \
+            -H:+EnableCrossContainerImage \
+            -H:+CrossContainerImage \
+            -H:TargetPlatform=osx-aarch64 \
             -cp target/sqlift.jar:target/lib/* \
             cl.playground.cli.CommandLineApp
 
