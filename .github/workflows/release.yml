@@ -1,0 +1,69 @@
+name: Release SQLift
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            output_name: sqlift-linux-x64
+          - os: macos-latest
+            output_name: sqlift-macos-x64
+          - os: windows-latest
+            output_name: sqlift-windows-x64.exe
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          version: 'latest'
+          java-version: '17'
+          components: 'native-image'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build with Maven
+        run: mvn -B package
+
+      - name: Build Native Image
+        run: |
+          native-image --no-fallback \
+                      --static \
+                      -H:+ReportExceptionStackTraces \
+                      -jar target/sqlift.jar \
+                      -o ${{ matrix.output_name }}
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.output_name }}
+          path: ${{ matrix.output_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            sqlift-linux-x64/sqlift-linux-x64
+            sqlift-macos-x64/sqlift-macos-x64
+            sqlift-windows-x64.exe/sqlift-windows-x64.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
