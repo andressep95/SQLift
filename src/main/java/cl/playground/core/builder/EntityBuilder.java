@@ -71,6 +71,9 @@ public class EntityBuilder {
             }
         }
 
+        // Empty line
+        classContent.append("\n");
+
         // Default Constructor
         addDefaultConstructor(classContent);
 
