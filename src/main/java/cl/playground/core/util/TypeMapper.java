@@ -76,8 +76,10 @@ public class TypeMapper {
             return input;
         }
 
-        // Manejar el caso de plural
-        if (input.endsWith("s")) {
+        // Manejar plurales
+        if (input.endsWith("es")) {
+            input = input.substring(0, input.length() - 2);
+        } else if (input.endsWith("s")) {
             input = input.substring(0, input.length() - 1);
         }
 

@@ -5,8 +5,8 @@ import cl.playground.cli.commands.InitCommand;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-@Command(name = "sqlj", mixinStandardHelpOptions = true, version = "1.0",
-        description = "Comandos para manejar archivos YAML de SQLJ",
+@Command(name = "sqlift", mixinStandardHelpOptions = true, version = "1.0",
+        description = "Comandos para manejar archivos YAML de SQLift",
         subcommands = {
                 InitCommand.class,
                 GenerateCommand.class

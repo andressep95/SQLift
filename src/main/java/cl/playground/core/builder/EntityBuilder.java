@@ -119,7 +119,7 @@ public class EntityBuilder {
         );
 
         String fieldName = toCamelCase(column.getColumnName().replace("_id", ""));
-        classContent.append("    private ").append(javaType).append(" ").append(fieldName).append(";\n\n");
+        classContent.append("    private ").append(javaType).append(" ").append(fieldName).append(";\n");
     }
 
 

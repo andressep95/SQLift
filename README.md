@@ -10,66 +10,6 @@ sql:
       jpa: true     # (Opcional) Si deseas incluir anotaciones JPA
 ````
 
-```
-com.sqlift
-    ├── cli/              # Todo lo relacionado con PicoCLI
-    │   └── commands/     # Comandos específicos de la CLI
-    │
-    ├── config/           # Manejo de configuración
-    │   ├── model/        # Clases POJO para el YAML
-    │   └── reader/       # Lectores de configuración
-    │
-    ├── core/             # Lógica central de la aplicación
-    │   ├── engine/       # Motores de BD soportados
-    │   ├── mapper/       # Mapeo SQL a Java
-    │   └── generator/    # Generación de código
-    │
-    ├── util/             # Utilidades generales
-    │   ├── file/         # Manejo de archivos
-    │   └── validation/   # Validaciones
-    │
-    └── exception/        # Excepciones personalizadas
-```
-
-Explicación detallada de cada paquete:
-
-1. **com.sqlift.cli**
-    - `CommandLineApp.java` - Clase principal
-    - `commands/GenerateCommand.java` - Comando principal de generación
-
-2. **com.sqlift.config**
-    - `model/SqliftConfig.java` - Modelo del YAML
-    - `reader/YamlConfigReader.java` - Lectura del archivo de configuración
-
-3. **com.sqlift.core**
-    - `engine/`
-        - `DatabaseEngine.java` (interfaz)
-        - `PostgresEngine.java`
-        - `MySqlEngine.java`
-    - `mapper/`
-        - `SqlToJavaMapper.java`
-        - `TypeMapper.java`
-    - `generator/`
-        - `EntityGenerator.java`
-        - `PackageGenerator.java`
-
-4. **com.sqlift.util**
-    - `file/PathResolver.java` - Manejo de rutas
-    - `validation/ConfigValidator.java` - Validaciones
-
-5. **com.sqlift.exception**
-    - `ConfigurationException.java`
-    - `MappingException.java`
-    - `GenerationException.java`
-
-Esta estructura:
-- Separa claramente las responsabilidades
-- Es fácil de mantener y escalar
-- Permite agregar nuevos motores de BD fácilmente
-- Mantiene el código organizado por funcionalidad
-
-
-
 | **Comando**                                     | **Descripción**                                                                                 |
 |-------------------------------------------------|-------------------------------------------------------------------------------------------------|
 | `mvn clean package`                             | Limpia y compila el proyecto, generando un archivo JAR. Si se configura GraalVM, también compila a nativo. |

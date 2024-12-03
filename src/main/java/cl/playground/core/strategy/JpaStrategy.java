@@ -37,13 +37,13 @@ public class JpaStrategy implements EntityStrategy {
 
     @Override
     public String addImports() {
-        return "import javax.persistence.Entity;\n" +
-                "import javax.persistence.Table;\n" +
-                "import javax.persistence.Column;\n" +
-                "import javax.persistence.Id;\n" +
-                "import javax.persistence.GeneratedValue;\n" +
-                "import javax.persistence.GenerationType;\n" +
-                "import javax.persistence.ManyToOne;\n" +
-                "import javax.persistence.JoinColumn;\n";
+        return "import jakarta.persistence.Entity;\n" +
+                "import jakarta.persistence.Table;\n" +
+                "import jakarta.persistence.Column;\n" +
+                "import jakarta.persistence.Id;\n" +
+                "import jakarta.persistence.GeneratedValue;\n" +
+                "import jakarta.persistence.GenerationType;\n" +
+                "import jakarta.persistence.ManyToOne;\n" +
+                "import jakarta.persistence.JoinColumn;\n";
     }
 }
