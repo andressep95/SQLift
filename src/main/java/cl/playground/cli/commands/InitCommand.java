@@ -42,13 +42,15 @@ public class InitCommand implements Runnable {
                 "```yaml\n" +
                 "version: \"1\"\n" +
                 "sql:\n" +
-                "  engine: \"postgresql\"\n" +
+                "  engine: \"postgresql\"     # Database engine\n" +
                 "  schema: \"path/to/your/schema.sql\"\n" +
                 "  output:\n" +
                 "    package: \"com.example.demo.entity\"\n" +
                 "    options:\n" +
-                "      lombok: true\n" +
-                "      jpa: true\n" +
+                "      lombok: false\n" +
+                "      jpa:\n" +
+                "        enabled: true\n" +
+                "        type: \"jakarta\"  # o \"javax\"\n" +
                 "```\n\n" +
                 "### Configuration Options:\n\n" +
                 "- `version`: Configuration version (currently \"1\")\n" +
@@ -58,17 +60,22 @@ public class InitCommand implements Runnable {
                 "  - `output`:\n" +
                 "    - `package`: Base package for generated entities\n" +
                 "    - `options`:\n" +
-                "      - `lombok`: Generate with Lombok annotations\n" +
-                "      - `jpa`: Include JPA annotations\n\n" +
+                "      - `lombok`: Enable/disable Lombok annotations\n" +
+                "      - `jpa`:\n" +
+                "        - `enabled`: Enable/disable JPA annotations\n" +
+                "        - `type`: Select JPA implementation (\"jakarta\" or \"javax\")\n\n" +
                 "## Supported Features\n\n" +
                 "- Supported Databases:\n" +
                 "  - PostgreSQL\n" +
-                "  - MySQL\n" +
-                "  - Oracle\n" +
-                "  - SQL Server\n\n" +
+                "  - MySQL (Coming soon)\n" +
+                "  - Oracle (Coming soon)\n" +
+                "  - SQL Server (Coming soon)\n\n" +
                 "- Code Generation Options:\n" +
                 "  - Lombok annotations (@Data, @Getter, @Setter, etc.)\n" +
-                "  - JPA annotations (@Entity, @Table, @Column, etc.)\n\n" +
+                "  - JPA annotations:\n" +
+                "    - Jakarta EE (@Entity, @Table, @Column, etc.)\n" +
+                "    - Java EE (javax.persistence.*)\n\n" +
+                "    - Java EE (jakarta.persistence.*)\n\n" +
                 "## Usage\n\n" +
                 "1. Initialize the configuration:\n" +
                 "   ```bash\n" +
