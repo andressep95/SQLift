@@ -93,10 +93,32 @@ public class YamlParser {
             if (line.startsWith("lombok:")) {
                 options.setLombok(Boolean.parseBoolean(extractValue(line)));
             } else if (line.startsWith("jpa:")) {
-                options.setJpa(Boolean.parseBoolean(extractValue(line)));
+                SqliftConfig.JpaConfig jpaConfig = new SqliftConfig.JpaConfig();
+                options.setJpa(jpaConfig);
+                parseJpaConfig(br, jpaConfig);
             }
         }
     }
+
+    private void parseJpaConfig(BufferedReader br, SqliftConfig.JpaConfig jpaConfig) throws IOException {
+        String line;
+        while ((line = br.readLine()) != null) {
+            if (!line.startsWith(INDENT + INDENT + INDENT + INDENT)) {
+                break;
+            }
+            line = line.trim();
+            if (isSkippable(line)) {
+                continue;
+            }
+
+            if (line.startsWith("enabled:")) {
+                jpaConfig.setEnabled(Boolean.parseBoolean(extractValue(line)));
+            } else if (line.startsWith("type:")) {
+                jpaConfig.setType(extractValue(line));
+            }
+        }
+    }
+
 
     private String extractValue(String line) {
         String[] parts = line.split(":", 2);

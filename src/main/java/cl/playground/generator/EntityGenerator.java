@@ -1,5 +1,6 @@
 package cl.playground.generator;
 
+import cl.playground.config.model.SqliftConfig;
 import cl.playground.core.engine.*;
 import cl.playground.core.model.*;
 import cl.playground.core.builder.EntityBuilder;
@@ -16,7 +17,7 @@ public class EntityGenerator {
             DatabaseEngine engine = DatabaseEngineFactory.createEngine((String) context.get("engine"));
             List<EntityStrategy> strategies = StrategyFactory.createStrategies(
                     (boolean) context.get("useLombok"),
-                    (boolean) context.get("useJpa")
+                    ((SqliftConfig) context.get("config")).getSql().getOutput().getOptions().getJpa()
             );
 
             // Procesar SQL y obtener definiciones de clase

@@ -4,6 +4,12 @@ import cl.playground.core.model.ColumnDefinition;
 
 public class JpaStrategy implements EntityStrategy {
 
+    private final String importPrefix;
+
+    public JpaStrategy(String type) {
+        this.importPrefix = (type != null && type.equalsIgnoreCase("jakarta")) ? "jakarta" : "javax";
+    }
+
     @Override
     public String addClassAnnotations(String tableName) {
         return "@Entity\n" +
@@ -37,13 +43,17 @@ public class JpaStrategy implements EntityStrategy {
 
     @Override
     public String addImports() {
-        return "import jakarta.persistence.Entity;\n" +
-                "import jakarta.persistence.Table;\n" +
-                "import jakarta.persistence.Column;\n" +
-                "import jakarta.persistence.Id;\n" +
-                "import jakarta.persistence.GeneratedValue;\n" +
-                "import jakarta.persistence.GenerationType;\n" +
-                "import jakarta.persistence.ManyToOne;\n" +
-                "import jakarta.persistence.JoinColumn;\n";
+        return String.format("""
+            import %s.persistence.Entity;
+            import %s.persistence.Table;
+            import %s.persistence.Column;
+            import %s.persistence.Id;
+            import %s.persistence.GeneratedValue;
+            import %s.persistence.GenerationType;
+            import %s.persistence.ManyToOne;
+            import %s.persistence.JoinColumn;
+            """,
+                importPrefix, importPrefix, importPrefix, importPrefix,
+                importPrefix, importPrefix, importPrefix, importPrefix);
     }
 }
