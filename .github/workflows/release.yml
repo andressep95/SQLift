@@ -52,7 +52,7 @@ jobs:
             cl.playground.cli.CommandLineApp
 
       - name: Build Native Image (macOS x64)
-        if: runner.os == 'macOS' && matrix.os == 'macos-latest'
+        if: runner.os == 'macOS' && matrix.os == 'macos-13'
         run: |
           native-image --no-fallback \
             -H:+ReportExceptionStackTraces \
