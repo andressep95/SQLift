@@ -74,14 +74,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          native-image 
-            --no-fallback 
-            -H:+ReportExceptionStackTraces 
-            -H:Name=sqlift-windows-x64 
-            --initialize-at-build-time=cl.playground.cli.CommandLineApp 
-            --initialize-at-build-time=picocli 
-            "-cp" "target/sqlift.jar;target/lib/*" `
+          native-image `
+            --no-fallback `
+            -H:+ReportExceptionStackTraces `
+            -H:Name=sqlift-windows-x64 `
+            --initialize-at-build-time=cl.playground.cli.CommandLineApp `
+            --initialize-at-build-time=picocli `
+            -cp "target/sqlift.jar;target/lib/*" `
             cl.playground.cli.CommandLineApp
+      
 
       - name: List Generated Files
         run: ls -R
