@@ -1,10 +1,8 @@
 name: Build and Releases
-
 on:
   push:
     tags:
-      - 'v*'
-
+      - 'v'
 jobs:
   build:
     name: Build on ${{ matrix.os }}
@@ -26,7 +24,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
       - name: Set up GraalVM
         uses: graalvm/setup-graalvm@v1
         with:
@@ -48,7 +45,7 @@ jobs:
             -H:Name=${{ matrix.output_name }} \
             --initialize-at-build-time=cl.playground.cli.CommandLineApp \
             --initialize-at-build-time=picocli \
-            -cp target/sqlift.jar:target/lib/* \
+            -cp target/sqlift.jar:target/lib/ \
             cl.playground.cli.CommandLineApp
 
       - name: Build Native Image (macOS x64)
@@ -77,12 +74,12 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          native-image `
-            --no-fallback `
-            -H:+ReportExceptionStackTraces `
-            -H:Name=sqlift-windows-x64 `
-            --initialize-at-build-time=cl.playground.cli.CommandLineApp `
-            --initialize-at-build-time=picocli `
+          native-image 
+            --no-fallback 
+            -H:+ReportExceptionStackTraces 
+            -H:Name=sqlift-windows-x64 
+            --initialize-at-build-time=cl.playground.cli.CommandLineApp 
+            --initialize-at-build-time=picocli 
             "-cp" "target/sqlift.jar;target/lib/*" `
             cl.playground.cli.CommandLineApp
 
@@ -110,10 +107,8 @@ jobs:
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
-
       - name: List Downloaded Artifacts
         run: ls -R
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
