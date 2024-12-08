@@ -25,9 +25,7 @@ public class JpaStrategy implements EntityStrategy {
                     .append("    @GeneratedValue(strategy = GenerationType.IDENTITY)\n")
                     .append("    @Column(name = \"").append(column.getColumnName()).append("\")\n");
         } else if (isForeignKey) {
-            annotations.append("    @ManyToOne\n")
-                    .append("    @JoinColumn(name = \"").append(column.getColumnName())
-                    .append("\", nullable = ").append(column.isNullable() ? "true" : "false")
+            annotations.append("\", nullable = ").append(column.isNullable() ? "true" : "false")
                     .append(")\n");
         } else {
             annotations.append("    @Column(name = \"").append(column.getColumnName()).append("\"");
@@ -50,8 +48,6 @@ public class JpaStrategy implements EntityStrategy {
             import %s.persistence.Id;
             import %s.persistence.GeneratedValue;
             import %s.persistence.GenerationType;
-            import %s.persistence.ManyToOne;
-            import %s.persistence.JoinColumn;
             """,
                 importPrefix, importPrefix, importPrefix, importPrefix,
                 importPrefix, importPrefix, importPrefix, importPrefix);
