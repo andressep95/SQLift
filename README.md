@@ -1,4 +1,4 @@
-# SQLift Generator
+# SQLift Generator.
 
 A tool to generate Java entity classes from SQL schema files.
 
