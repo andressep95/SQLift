@@ -9,9 +9,9 @@
 
 ## Installation
 
-| Command | Description |
-|---------|-------------|
-| `mv target/<executable-name> /usr/local/bin/` | Move the compiled executable to PATH for system-wide access. |
+| Command                               | Description |
+|---------------------------------------|-------------|
+| `mv target/sqlift /usr/local/bin/`    | Move the compiled executable to PATH for system-wide access. |
 | `rm /usr/local/bin/<executable-name>` | Remove the executable from PATH if you need to recompile or fix errors. |
 
 ## Environment Setup
@@ -25,10 +25,10 @@
 
 ## Utility Commands
 
-| Command | Description |
-|---------|-------------|
-| `which <executable-name>` | Find the location of an executable in the system. |
-| `sudo rm /usr/local/bin/<executable-name>` | Remove a specific executable from `/usr/local/bin/`. |
+| Command                         | Description |
+|---------------------------------|-------------|
+| `which sqlift`                  | Find the location of an executable in the system. |
+| `sudo rm /usr/local/bin/sqlift` | Remove a specific executable from `/usr/local/bin/`. |
 
 
 ## Git Commands

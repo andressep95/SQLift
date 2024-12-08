@@ -28,7 +28,7 @@ public class PostgresEngine implements DatabaseEngine {
         Matcher tableMatcher = TABLE_PATTERN.matcher(sqlContent);
 
         while (tableMatcher.find()) {
-            String tableName = tableMatcher.group(1);
+            String tableName = tableMatcher.group(1).toLowerCase();
             String columnsDefinition = tableMatcher.group(2);
 
             TableDefinition tableDefinition = parseTableDefinition(tableName, columnsDefinition);
@@ -82,7 +82,7 @@ public class PostgresEngine implements DatabaseEngine {
             if (constraints != null) {
                 Matcher fkMatcher = FOREIGN_KEY_PATTERN.matcher(constraints);
                 if (fkMatcher.find()) {
-                    String referencedTableName = fkMatcher.group(1);
+                    String referencedTableName = fkMatcher.group(1).toLowerCase();
                     String referencedColumnName = fkMatcher.group(2);
                     // Para foreign keys, usamos el tipo de la entidad referenciada
                     ColumnDefinition column = new ColumnDefinition(
