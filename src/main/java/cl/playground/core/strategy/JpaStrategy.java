@@ -25,13 +25,28 @@ public class JpaStrategy implements EntityStrategy {
                     .append("    @GeneratedValue(strategy = GenerationType.IDENTITY)\n")
                     .append("    @Column(name = \"").append(column.getColumnName()).append("\")\n");
         } else if (isForeignKey) {
-            annotations.append("\", nullable = ").append(column.isNullable() ? "true" : "false")
+            annotations.append("    @ManyToOne\n")
+                    .append("    @JoinColumn(name = \"").append(column.getColumnName())
+                    .append("\", nullable = ").append(column.isNullable() ? "true" : "false")
                     .append(")\n");
         } else {
             annotations.append("    @Column(name = \"").append(column.getColumnName()).append("\"");
+
+            // Agregar longitud si existe
+            if (column.getLength() != null) {
+                annotations.append(", length = ").append(column.getLength());
+            }
+
+            // Agregar nullable si es false
             if (!column.isNullable()) {
                 annotations.append(", nullable = false");
             }
+
+            // Agregar unique si es true
+            if (column.isUnique()) {
+                annotations.append(", unique = true");
+            }
+
             annotations.append(")\n");
         }
 
