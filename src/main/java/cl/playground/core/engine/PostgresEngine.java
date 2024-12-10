@@ -13,7 +13,7 @@ public class PostgresEngine implements DatabaseEngine {
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern COLUMN_PATTERN = Pattern.compile(
-            "(\\w+)\\s+(\\w+)(?:\\([^)]+\\))?(\\s+[^,]+)?",
+            "(\\w+)\\s+(\\w+)(?:\\(([^)]+)\\))?(\\s+[^,]+)?",
             Pattern.CASE_INSENSITIVE
     );
     private static final Pattern FOREIGN_KEY_PATTERN = Pattern.compile(
@@ -28,7 +28,7 @@ public class PostgresEngine implements DatabaseEngine {
         Matcher tableMatcher = TABLE_PATTERN.matcher(sqlContent);
 
         while (tableMatcher.find()) {
-            String tableName = tableMatcher.group(1);
+            String tableName = tableMatcher.group(1).toLowerCase();
             String columnsDefinition = tableMatcher.group(2);
 
             TableDefinition tableDefinition = parseTableDefinition(tableName, columnsDefinition);
@@ -73,23 +73,28 @@ public class PostgresEngine implements DatabaseEngine {
         while (columnMatcher.find()) {
             String columnName = columnMatcher.group(1);
             String columnType = columnMatcher.group(2);
-            String constraints = columnMatcher.group(3);
+            String size = columnMatcher.group(3);
+            String constraints = columnMatcher.group(4);
 
             boolean isNullable = constraints == null || !constraints.toLowerCase().contains("not null");
+            boolean isUnique = constraints != null && constraints.toLowerCase().contains("unique");
             String defaultValue = extractDefaultValue(constraints);
+            String length = columnType.toLowerCase().contains("varchar") ? size : null;
 
             // Verificar si es foreign key primero
             if (constraints != null) {
                 Matcher fkMatcher = FOREIGN_KEY_PATTERN.matcher(constraints);
                 if (fkMatcher.find()) {
-                    String referencedTableName = fkMatcher.group(1);
+                    String referencedTableName = fkMatcher.group(1).toLowerCase();
                     String referencedColumnName = fkMatcher.group(2);
                     // Para foreign keys, usamos el tipo de la entidad referenciada
                     ColumnDefinition column = new ColumnDefinition(
                             columnName,
-                            referencedTableName, // Usamos el nombre de la tabla como tipo
+                            referencedTableName,
                             isNullable,
-                            defaultValue
+                            defaultValue,
+                            isUnique,
+                            length
                     );
                     tableDefinition.addColumn(column);
 
@@ -108,7 +113,9 @@ public class PostgresEngine implements DatabaseEngine {
                     columnName,
                     columnType,
                     isNullable,
-                    defaultValue
+                    defaultValue,
+                    isUnique,
+                    length
             );
 
             if (isPrimaryKey(constraints)) {
@@ -130,10 +137,12 @@ public class PostgresEngine implements DatabaseEngine {
                 if (referencedClass != null) {
                     String fieldName = fk.getColumnName().replace("_id", "");
                     ColumnDefinition relationColumn = new ColumnDefinition(
-                            fieldName,
-                            referencedClass.getClassName(),
-                            true,
-                            null
+                            fieldName,                    // columnName
+                            referencedClass.getClassName(), // columnType
+                            true,                         // isNullable
+                            null,                         // defaultValue
+                            false,                        // isUnique
+                            null                          // length
                     );
                     classDefinition.addAttribute(relationColumn);
 

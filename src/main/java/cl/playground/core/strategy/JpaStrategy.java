@@ -31,9 +31,22 @@ public class JpaStrategy implements EntityStrategy {
                     .append(")\n");
         } else {
             annotations.append("    @Column(name = \"").append(column.getColumnName()).append("\"");
+
+            // Agregar longitud si existe
+            if (column.getLength() != null) {
+                annotations.append(", length = ").append(column.getLength());
+            }
+
+            // Agregar nullable si es false
             if (!column.isNullable()) {
                 annotations.append(", nullable = false");
             }
+
+            // Agregar unique si es true
+            if (column.isUnique()) {
+                annotations.append(", unique = true");
+            }
+
             annotations.append(")\n");
         }
 
@@ -50,8 +63,6 @@ public class JpaStrategy implements EntityStrategy {
             import %s.persistence.Id;
             import %s.persistence.GeneratedValue;
             import %s.persistence.GenerationType;
-            import %s.persistence.ManyToOne;
-            import %s.persistence.JoinColumn;
             """,
                 importPrefix, importPrefix, importPrefix, importPrefix,
                 importPrefix, importPrefix, importPrefix, importPrefix);
