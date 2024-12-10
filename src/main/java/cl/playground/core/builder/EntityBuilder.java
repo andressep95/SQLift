@@ -29,7 +29,6 @@ public class EntityBuilder {
             throw new IllegalStateException("No primary key defined for class " + classDefinition.getClassName());
         }
 
-
         StringBuilder classContent = new StringBuilder();
 
         // Package declaration
@@ -74,14 +73,19 @@ public class EntityBuilder {
         // Empty line
         classContent.append("\n");
 
-        // Default Constructor
-        addDefaultConstructor(classContent);
+        // Only generate constructors, getters and setters if Lombok is not being used
+        boolean usesLombok = strategies.stream().anyMatch(s -> s.getClass().getSimpleName().equals("LombokStrategy"));
 
-        // All args Constructor
-        addAllArgsConstructor(classContent);
+        if (!usesLombok) {
+            // Default Constructor
+            addDefaultConstructor(classContent);
 
-        // Getters and Setters
-        addGettersAndSetters(classContent);
+            // All args Constructor
+            addAllArgsConstructor(classContent);
+
+            // Getters and Setters
+            addGettersAndSetters(classContent);
+        }
 
         // Close class
         classContent.append("}");
@@ -247,6 +251,4 @@ public class EntityBuilder {
 
         return result.toString();
     }
-
-
 }
