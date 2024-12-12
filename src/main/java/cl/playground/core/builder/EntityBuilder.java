@@ -53,13 +53,9 @@ public class EntityBuilder {
         // 2. Foreign Keys
         List<ForeignKeyDefinition> foreignKeys = classDefinition.getForeignKeys();
         List<ColumnDefinition> attributes = classDefinition.getAttributes();
-
-        for (ForeignKeyDefinition fk : foreignKeys) {
-            for (ColumnDefinition column : attributes) {
-                if (column.getColumnName().equals(fk.getColumnName())) {
-                    addField(classContent, column, true, false);
-                    break;
-                }
+        for (ColumnDefinition column : attributes) {
+            if (column.isForeignKey()) {
+                addField(classContent, column, true, false);
             }
         }
 
@@ -94,8 +90,7 @@ public class EntityBuilder {
     }
 
     private boolean isRegularField(ColumnDefinition column, List<ForeignKeyDefinition> foreignKeys) {
-        return foreignKeys.stream()
-                .noneMatch(fk -> fk.getColumnName().equals(column.getColumnName())) &&
+        return !column.isForeignKey() &&
                 !column.getColumnName().equals(classDefinition.getPrimaryKey().getColumnName());
     }
 
@@ -115,8 +110,18 @@ public class EntityBuilder {
     }
 
     private void addField(StringBuilder classContent, ColumnDefinition column, boolean isForeignKey, boolean isPrimaryKey) {
+        // Obtener la ForeignKeyDefinition correspondiente si es una FK
+        ForeignKeyDefinition foreignKey = null;
+        if (isForeignKey) {
+            foreignKey = classDefinition.getForeignKeys().stream()
+                    .filter(fk -> fk.getColumnName().equals(column.getColumnName()))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        // Aplicar las anotaciones de cada estrategia
         for (EntityStrategy strategy : strategies) {
-            classContent.append(strategy.addFieldAnnotations(column, isForeignKey, isPrimaryKey));
+            classContent.append(strategy.addFieldAnnotations(column, foreignKey, isPrimaryKey));
         }
 
         String javaType = engine.mapDataType(
@@ -209,6 +214,14 @@ public class EntityBuilder {
     }
 
     private void addAccessors(StringBuilder classContent, ColumnDefinition column, boolean isForeignKey) {
+        ForeignKeyDefinition foreignKey = null;
+        if (isForeignKey) {
+            foreignKey = classDefinition.getForeignKeys().stream()
+                    .filter(fk -> fk.getColumnName().equals(column.getColumnName()))
+                    .findFirst()
+                    .orElse(null);
+        }
+
         String javaType = engine.mapDataType(column.getColumnType(), column.getColumnName(), isForeignKey);
         String fieldName = isForeignKey ?
                 toCamelCase(column.getColumnName().replace("_id", "")) :

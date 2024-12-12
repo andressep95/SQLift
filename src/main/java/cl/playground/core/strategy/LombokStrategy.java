@@ -1,6 +1,7 @@
 package cl.playground.core.strategy;
 
 import cl.playground.core.model.ColumnDefinition;
+import cl.playground.core.model.ForeignKeyDefinition;
 
 public class LombokStrategy implements EntityStrategy {
     @Override
@@ -20,7 +21,7 @@ public class LombokStrategy implements EntityStrategy {
     }
 
     @Override
-    public String addFieldAnnotations(ColumnDefinition column, boolean isForeignKey, boolean isPrimaryKey) {
+    public String addFieldAnnotations(ColumnDefinition column, ForeignKeyDefinition isForeignKey, boolean isPrimaryKey) {
         return ""; // Lombok no necesita anotaciones en campos
     }
 }

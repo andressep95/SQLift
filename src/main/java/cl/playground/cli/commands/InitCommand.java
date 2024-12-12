@@ -21,7 +21,7 @@ public class InitCommand implements Runnable {
     private void generateYamlFile() {
         String yamlContent = "version: \"1\"\n" +
                 "sql:\n" +
-                "  engine: \"postgresql\"     # Database engine\n" +
+                "  engine: \"postgresql\"\n" +
                 "  schema: \"path/to/your/schema.sql\"\n" +
                 "  output:\n" +
                 "    package: \"com.example.demo.entity\"\n" +
