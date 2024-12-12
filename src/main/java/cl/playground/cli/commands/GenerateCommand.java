@@ -12,7 +12,6 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-
 @Command(
         name = "generate",
         description = "Generate Java entity classes from SQL schema"
@@ -66,8 +65,17 @@ public class GenerateCommand implements Runnable {
 
         // Validar configuración requerida
         if (config == null || config.getSql() == null || config.getSql().getOutput() == null ||
-                config.getSql().getOutput().getOptions() == null || config.getSql().getOutput().getOptions().getJpa() == null) {
+                config.getSql().getOutput().getOptions() == null || config.getSql().getOutput().getOptions().getPersistence() == null) {
             throw new ConfigurationException("Invalid YAML: Missing required fields.");
+        }
+
+        // Obtener el modo de persistencia
+        String persistenceMode = config.getSql().getOutput().getOptions().getPersistence().getMode();
+
+        if (persistenceMode == null || (!persistenceMode.equalsIgnoreCase("jakarta") &&
+                !persistenceMode.equalsIgnoreCase("hibernate") &&
+                !persistenceMode.equalsIgnoreCase("none"))) {
+            throw new ConfigurationException("Invalid YAML: Unsupported persistence mode: " + persistenceMode);
         }
 
         // Almacenar datos relevantes
@@ -76,12 +84,11 @@ public class GenerateCommand implements Runnable {
         context.put("schema", config.getSql().getSchema());
         context.put("outputPackage", config.getSql().getOutput().getPackageName());
         context.put("useLombok", config.getSql().getOutput().getOptions().isLombok());
+        context.put("persistenceMode", persistenceMode); // Nuevo: Almacena el modo de persistencia
 
         System.out.println("✔ YAML configuration loaded successfully.");
         System.out.println(config.toString());
 
-
         return context;
     }
-
 }

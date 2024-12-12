@@ -27,9 +27,8 @@ public class InitCommand implements Runnable {
                 "    package: \"com.example.demo.entity\"\n" +
                 "    options:\n" +
                 "      lombok: false\n" +
-                "      jpa:\n" +
-                "        enabled: true\n" +
-                "        type: \"jakarta\"  # o \"javax\"\n";
+                "      persistence:\n" +
+                "        mode: \"jakarta\"\n";
 
         writeToFile("sqlift.yaml", yamlContent);
     }
@@ -48,9 +47,8 @@ public class InitCommand implements Runnable {
                 "    package: \"com.example.demo.entity\"\n" +
                 "    options:\n" +
                 "      lombok: false\n" +
-                "      jpa:\n" +
-                "        enabled: true\n" +
-                "        type: \"jakarta\"  # o \"javax\"\n" +
+                "      persistence:\n" +
+                "        mode: \"jakarta\"  # Options: 'jakarta', 'hibernate', 'none'\n" +
                 "```\n\n" +
                 "### Configuration Options:\n\n" +
                 "- `version`: Configuration version (currently \"1\")\n" +
@@ -61,9 +59,8 @@ public class InitCommand implements Runnable {
                 "    - `package`: Base package for generated entities\n" +
                 "    - `options`:\n" +
                 "      - `lombok`: Enable/disable Lombok annotations\n" +
-                "      - `jpa`:\n" +
-                "        - `enabled`: Enable/disable JPA annotations\n" +
-                "        - `type`: Select JPA implementation (\"jakarta\" or \"javax\")\n\n" +
+                "      - `persistence`:\n" +
+                "        - `mode`: Select persistence mode (\"jakarta\", \"hibernate\", \"none\")\n\n" +
                 "## Supported Features\n\n" +
                 "- Supported Databases:\n" +
                 "  - PostgreSQL\n" +
@@ -72,10 +69,9 @@ public class InitCommand implements Runnable {
                 "  - SQL Server (Coming soon)\n\n" +
                 "- Code Generation Options:\n" +
                 "  - Lombok annotations (@Data, @Getter, @Setter, etc.)\n" +
-                "  - JPA annotations:\n" +
+                "  - Persistence annotations:\n" +
                 "    - Jakarta EE (@Entity, @Table, @Column, etc.)\n" +
-                "    - Java EE (javax.persistence.*)\n\n" +
-                "    - Java EE (jakarta.persistence.*)\n\n" +
+                "    - Hibernate (specific annotations for Hibernate projects)\n\n" +
                 "## Usage\n\n" +
                 "1. Initialize the configuration:\n" +
                 "   ```bash\n" +
@@ -87,7 +83,7 @@ public class InitCommand implements Runnable {
                 "   sqlift generate\n" +
                 "   ```\n";
 
-        writeToFile("README.md", readmeContent);
+        writeToFile("SQLIFT.md", readmeContent);
     }
 
     private void writeToFile(String fileName, String content) {

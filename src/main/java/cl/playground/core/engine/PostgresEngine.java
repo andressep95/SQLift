@@ -20,45 +20,128 @@ public class PostgresEngine implements DatabaseEngine {
             "REFERENCES\\s+(\\w+)\\s*\\((\\w+)\\)",
             Pattern.CASE_INSENSITIVE
     );
+    private static final Pattern INTERMEDIATE_TABLE_PATTERN = Pattern.compile(
+            "CREATE\\s+TABLE\\s+(\\w+)\\s*\\(\\s*" +
+                    ".*?REFERENCES\\s+(\\w+)\\s*\\([^)]+\\)\\s*(ON\\s+(?:DELETE|UPDATE)\\s+(?:CASCADE|RESTRICT|SET\\s+NULL))?" +
+                    ".*?REFERENCES\\s+(\\w+)\\s*\\([^)]+\\)\\s*(ON\\s+(?:DELETE|UPDATE)\\s+(?:CASCADE|RESTRICT|SET\\s+NULL))?" +
+                    ".*?\\)\\s*;",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+    );
 
     @Override
     public Map<String, ClassDefinition> mapSqlToClassDefinitions(String sqlContent, String basePackage) {
         Map<String, ClassDefinition> classMap = new HashMap<>();
         Map<String, TableDefinition> tableMap = new HashMap<>();
-        Matcher tableMatcher = TABLE_PATTERN.matcher(sqlContent);
 
+        // Paso 1: Parsear todas las tablas
+        parseAllTables(sqlContent, tableMap);
+
+        // Paso 2: Crear las ClassDefinition básicas
+        createBasicClassDefinitions(tableMap, classMap, basePackage);
+
+        // Paso 3: Procesar relaciones básicas
+        processBasicRelationships(classMap);
+
+        // Paso 4: Analizar y procesar tablas intermedias
+        processIntermediateTables(tableMap, classMap);
+
+        return classMap;
+    }
+
+    private void parseAllTables(String sqlContent, Map<String, TableDefinition> tableMap) {
+        Matcher tableMatcher = TABLE_PATTERN.matcher(sqlContent);
         while (tableMatcher.find()) {
             String tableName = tableMatcher.group(1).toLowerCase();
             String columnsDefinition = tableMatcher.group(2);
 
             TableDefinition tableDefinition = parseTableDefinition(tableName, columnsDefinition);
+            tableDefinition.setRawDefinition(tableMatcher.group(0));
             tableMap.put(tableName, tableDefinition);
+        }
+    }
 
-            String className = TypeMapper.toPascalCase(tableName);
-            ClassDefinition classDefinition = new ClassDefinition(className, basePackage);
+    private void createBasicClassDefinitions(Map<String, TableDefinition> tableMap,
+                                             Map<String, ClassDefinition> classMap,
+                                             String basePackage) {
+        for (TableDefinition tableDefinition : tableMap.values()) {
+            String className = TypeMapper.toPascalCase(tableDefinition.getTableName());
+            ClassDefinition classDefinition = new ClassDefinition(
+                    className,
+                    basePackage,
+                    tableDefinition.getTableName());
 
-            // Establecer primary key
             if (tableDefinition.getPrimaryKey() != null) {
                 classDefinition.setPrimaryKey(tableDefinition.getPrimaryKey());
             }
 
-            // Agregar columnas regulares
             for (ColumnDefinition column : tableDefinition.getColumns()) {
                 if (!column.equals(tableDefinition.getPrimaryKey())) {
                     classDefinition.addAttribute(column);
                 }
             }
 
-            // Agregar foreign keys
             for (ForeignKeyDefinition fk : tableDefinition.getForeignKeys()) {
                 classDefinition.addForeignKey(fk);
             }
 
-            classMap.put(tableName, classDefinition);
+            classMap.put(tableDefinition.getTableName(), classDefinition);
         }
+    }
 
-        processRelationships(classMap);
-        return classMap;
+    private void processBasicRelationships(Map<String, ClassDefinition> classMap) {
+        for (ClassDefinition classDefinition : classMap.values()) {
+            Map<String, ColumnDefinition> columnUpdates = new HashMap<>();
+
+            for (ForeignKeyDefinition fk : classDefinition.getForeignKeys()) {
+                String referencedTableName = fk.getReferenceTableName();
+                ClassDefinition referencedClass = classMap.get(referencedTableName);
+
+                if (referencedClass != null) {
+                    ColumnDefinition relationColumn = new ColumnDefinition(
+                            fk.getColumnName(),
+                            referencedClass.getClassName(),
+                            true,
+                            null,
+                            false,
+                            null,
+                            true
+                    );
+                    columnUpdates.put(fk.getColumnName(), relationColumn);
+                }
+            }
+
+            for (Map.Entry<String, ColumnDefinition> update : columnUpdates.entrySet()) {
+                classDefinition.getAttributes().removeIf(attr ->
+                        attr.getColumnName().equals(update.getKey())
+                );
+                classDefinition.addAttribute(update.getValue());
+            }
+        }
+    }
+
+    private void processIntermediateTables(Map<String, TableDefinition> tableMap,
+                                           Map<String, ClassDefinition> classMap) {
+        for (TableDefinition table : tableMap.values()) {
+            if (isIntermediateTable(table, tableMap)) {
+                List<ForeignKeyDefinition> fks = table.getForeignKeys();
+                TableDefinition firstTable = tableMap.get(fks.get(0).getReferenceTableName());
+                TableDefinition secondTable = tableMap.get(fks.get(1).getReferenceTableName());
+
+                if (firstTable != null && secondTable != null) {
+                    table.setTableType(TableType.INTERMEDIATE);
+                    table.setRelatedTables(firstTable, secondTable);
+
+                    ClassDefinition classDefinition = classMap.get(table.getTableName());
+                    if (classDefinition != null) {
+                        classDefinition.setTableType(TableType.INTERMEDIATE);
+                        classDefinition.setRelatedClasses(
+                                classMap.get(firstTable.getTableName()),
+                                classMap.get(secondTable.getTableName())
+                        );
+                    }
+                }
+            }
+        }
     }
 
     public String mapDataType(String sqlType, String columnName, boolean isForeignKey) {
@@ -129,46 +212,6 @@ public class PostgresEngine implements DatabaseEngine {
         return tableDefinition;
     }
 
-    private void processRelationships(Map<String, ClassDefinition> classMap) {
-        for (ClassDefinition classDefinition : classMap.values()) {
-            Map<String, ColumnDefinition> columnUpdates = new HashMap<>();
-
-            for (ForeignKeyDefinition fk : classDefinition.getForeignKeys()) {
-                String referencedTableName = fk.getReferenceTableName();
-                ClassDefinition referencedClass = classMap.get(referencedTableName);
-
-                if (referencedClass != null) {
-                    // Encontrar la columna original
-                    String originalColumnName = fk.getColumnName();
-                    String newFieldName = originalColumnName.replace("_id", "");
-
-                    // Crear la nueva columna manteniendo el mismo nombre que la FK
-                    ColumnDefinition relationColumn = new ColumnDefinition(
-                            originalColumnName,           // Mantener el nombre original
-                            referencedClass.getClassName(), // columnType
-                            true,                         // isNullable
-                            null,                         // defaultValue
-                            false,                        // isUnique
-                            null,                         // length
-                            true                          // isForeignKey
-                    );
-
-                    // Guardar para actualizar después
-                    columnUpdates.put(originalColumnName, relationColumn);
-                }
-            }
-
-            // Actualizar todas las columnas de una vez
-            for (Map.Entry<String, ColumnDefinition> update : columnUpdates.entrySet()) {
-                // Reemplazar la columna vieja por la nueva
-                classDefinition.getAttributes().removeIf(attr ->
-                        attr.getColumnName().equals(update.getKey())
-                );
-                classDefinition.addAttribute(update.getValue());
-            }
-        }
-    }
-
     private boolean isPrimaryKey(String constraints) {
         return constraints != null &&
                 (constraints.toLowerCase().contains("primary key") ||
@@ -180,5 +223,36 @@ public class PostgresEngine implements DatabaseEngine {
         Pattern defaultPattern = Pattern.compile("DEFAULT\\s+([^\\s,]+)", Pattern.CASE_INSENSITIVE);
         Matcher defaultMatcher = defaultPattern.matcher(constraints);
         return defaultMatcher.find() ? defaultMatcher.group(1) : null;
+    }
+
+    private boolean isIntermediateTable(TableDefinition table, Map<String, TableDefinition> allTables) {
+        if (table.getForeignKeys().size() != 2) return false;
+
+        Matcher matcher = INTERMEDIATE_TABLE_PATTERN.matcher(table.getRawDefinition());
+        if (!matcher.matches()) return false;
+
+        String firstTable = matcher.group(2);
+        String secondTable = matcher.group(4);
+        String tableName = table.getTableName();
+
+        return followsNamingConvention(tableName, firstTable, secondTable) &&
+                hasProperCascading(table.getRawDefinition());
+    }
+
+    private boolean followsNamingConvention(String tableName, String firstTable, String secondTable) {
+        String normalizedName = tableName.toLowerCase();
+        String combined = firstTable + "_" + secondTable;
+        String reversed = secondTable + "_" + firstTable;
+
+        return normalizedName.equals(combined) ||
+                normalizedName.equals(reversed) ||
+                normalizedName.endsWith("_rel") ||
+                normalizedName.endsWith("_map") ||
+                normalizedName.endsWith("_link");
+    }
+
+    private boolean hasProperCascading(String tableDefinition) {
+        return tableDefinition.toLowerCase().contains("on delete") ||
+                tableDefinition.toLowerCase().contains("on update");
     }
 }

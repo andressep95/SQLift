@@ -9,14 +9,19 @@ public class ClassDefinition {
 
     private final String className;
     private final String packageName;
+    private final String tableName;
     private ColumnDefinition primaryKey;
     private final List<ColumnDefinition> attributes;
     private final List<ForeignKeyDefinition> foreignKeys;
     private final Set<String> imports;
+    private TableType tableType = TableType.REGULAR;
+    private ClassDefinition firstRelatedClass;
+    private ClassDefinition secondRelatedClass;
 
-    public ClassDefinition(String className, String packageName) {
+    public ClassDefinition(String className, String packageName, String tableName) {
         this.className = className;
         this.packageName = packageName;
+        this.tableName = tableName;
         this.attributes = new ArrayList<>();
         this.foreignKeys = new ArrayList<>();
         this.imports = new HashSet<>();
@@ -28,6 +33,10 @@ public class ClassDefinition {
 
     public String getPackageName() {
         return packageName;
+    }
+
+    public String getTableName() {
+        return tableName;
     }
 
     public ColumnDefinition getPrimaryKey() {
@@ -60,5 +69,26 @@ public class ClassDefinition {
 
     public Set<String> getImports() {
         return imports;
+    }
+
+    public TableType getTableType() {
+        return tableType;
+    }
+
+    public void setTableType(TableType tableType) {
+        this.tableType = tableType;
+    }
+
+    public void setRelatedClasses(ClassDefinition first, ClassDefinition second) {
+        this.firstRelatedClass = first;
+        this.secondRelatedClass = second;
+    }
+
+    public ClassDefinition getFirstRelatedClass() {
+        return firstRelatedClass;
+    }
+
+    public ClassDefinition getSecondRelatedClass() {
+        return secondRelatedClass;
     }
 }

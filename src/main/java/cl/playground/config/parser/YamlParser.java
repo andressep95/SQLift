@@ -92,15 +92,15 @@ public class YamlParser {
 
             if (line.startsWith("lombok:")) {
                 options.setLombok(Boolean.parseBoolean(extractValue(line)));
-            } else if (line.startsWith("jpa:")) {
-                SqliftConfig.JpaConfig jpaConfig = new SqliftConfig.JpaConfig();
-                options.setJpa(jpaConfig);
-                parseJpaConfig(br, jpaConfig);
+            } else if (line.startsWith("persistence:")) {
+                SqliftConfig.PersistenceConfig persistenceConfig = new SqliftConfig.PersistenceConfig();
+                options.setPersistence(persistenceConfig);
+                parsePersistenceConfig(br, persistenceConfig);
             }
         }
     }
 
-    private void parseJpaConfig(BufferedReader br, SqliftConfig.JpaConfig jpaConfig) throws IOException {
+    private void parsePersistenceConfig(BufferedReader br, SqliftConfig.PersistenceConfig persistenceConfig) throws IOException {
         String line;
         while ((line = br.readLine()) != null) {
             if (!line.startsWith(INDENT + INDENT + INDENT + INDENT)) {
@@ -111,14 +111,11 @@ public class YamlParser {
                 continue;
             }
 
-            if (line.startsWith("enabled:")) {
-                jpaConfig.setEnabled(Boolean.parseBoolean(extractValue(line)));
-            } else if (line.startsWith("type:")) {
-                jpaConfig.setType(extractValue(line));
+            if (line.startsWith("mode:")) {
+                persistenceConfig.setMode(extractValue(line));
             }
         }
     }
-
 
     private String extractValue(String line) {
         String[] parts = line.split(":", 2);

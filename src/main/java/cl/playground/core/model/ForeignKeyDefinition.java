@@ -12,6 +12,7 @@ public class ForeignKeyDefinition implements Definition {
     private FetchStrategy fetchStrategy = FetchStrategy.LAZY; // Por defecto LAZY
     private List<CascadeStrategy> cascadeStrategies = new ArrayList<>();
     private RelationshipType relationshipType = RelationshipType.MANY_TO_ONE; // Por defecto
+    private boolean isOwner = true;
 
     public enum FetchStrategy {
         LAZY,
@@ -76,5 +77,13 @@ public class ForeignKeyDefinition implements Definition {
 
     public RelationshipType getRelationshipType() {
         return relationshipType;
+    }
+
+    public boolean isOwner() {
+        return isOwner;
+    }
+
+    public void setOwner(boolean owner) {
+        isOwner = owner;
     }
 }

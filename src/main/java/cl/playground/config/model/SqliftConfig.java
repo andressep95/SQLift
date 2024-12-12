@@ -112,12 +112,11 @@ public class SqliftConfig {
     // Clase interna para las opciones
     public static class Options {
         private boolean lombok;
-        private JpaConfig jpa;
+        private PersistenceConfig persistence;
 
         public Options() {
         }
 
-        // getters y setters
         public boolean isLombok() {
             return lombok;
         }
@@ -126,52 +125,42 @@ public class SqliftConfig {
             this.lombok = lombok;
         }
 
-        public JpaConfig getJpa() {
-            return jpa;
+        public PersistenceConfig getPersistence() {
+            return persistence;
         }
 
-        public void setJpa(JpaConfig jpa) {
-            this.jpa = jpa;
+        public void setPersistence(PersistenceConfig persistence) {
+            this.persistence = persistence;
         }
 
         @Override
         public String toString() {
             return "Options{" +
                     "lombok=" + lombok +
-                    ", jpa=" + jpa +
+                    ", persistence=" + persistence +
                     '}';
         }
     }
 
-    public static class JpaConfig {
-        private boolean enabled;
-        private String type;  // "jakarta" o "javax"
+    // Clase interna para la configuración de persistencia
+    public static class PersistenceConfig {
+        private String mode; // "jakarta", "hibernate", "none"
 
-        public JpaConfig() {
+        public PersistenceConfig() {
         }
 
-        // getters y setters
-        public boolean isEnabled() {
-            return enabled;
+        public String getMode() {
+            return mode;
         }
 
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public String getType() {
-            return type;
-        }
-
-        public void setType(String type) {
-            this.type = type;
+        public void setMode(String mode) {
+            this.mode = mode;
         }
 
         @Override
         public String toString() {
-            return "JpaConfig{" +
-                    "enabled=" + enabled +
-                    ", type='" + type + '\'' +
+            return "PersistenceConfig{" +
+                    "mode='" + mode + '\'' +
                     '}';
         }
     }

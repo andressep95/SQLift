@@ -17,7 +17,7 @@ public class EntityGenerator {
             DatabaseEngine engine = DatabaseEngineFactory.createEngine((String) context.get("engine"));
             List<EntityStrategy> strategies = StrategyFactory.createStrategies(
                     (boolean) context.get("useLombok"),
-                    ((SqliftConfig) context.get("config")).getSql().getOutput().getOptions().getJpa()
+                    ((SqliftConfig) context.get("config")).getSql().getOutput().getOptions().getPersistence()
             );
 
             // Procesar SQL y obtener definiciones de clase

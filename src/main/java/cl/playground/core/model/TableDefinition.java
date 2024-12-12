@@ -9,12 +9,16 @@ public class TableDefinition {
     private ColumnDefinition primaryKey;
     private final List<ColumnDefinition> columns;
     private final List<ForeignKeyDefinition> foreignKeys;
-
+    private TableType tableType;
+    private TableDefinition firstRelatedTable;
+    private TableDefinition secondRelatedTable;
+    private String rawDefinition;
 
     public TableDefinition(String tableName) {
         this.tableName = tableName;
         this.columns = new ArrayList<>();
         this.foreignKeys = new ArrayList<>();
+        this.tableType = TableType.REGULAR;
     }
 
     public String getTableName() {
@@ -42,5 +46,34 @@ public class TableDefinition {
 
     public void addForeignKey(ForeignKeyDefinition foreignKey) {
         this.foreignKeys.add(foreignKey);
+    }
+
+    public TableType getTableType() {
+        return tableType;
+    }
+
+    public void setTableType(TableType tableType) {
+        this.tableType = tableType;
+    }
+
+    public void setRelatedTables(TableDefinition first, TableDefinition second) {
+        this.firstRelatedTable = first;
+        this.secondRelatedTable = second;
+    }
+
+    public TableDefinition getFirstRelatedTable() {
+        return firstRelatedTable;
+    }
+
+    public TableDefinition getSecondRelatedTable() {
+        return secondRelatedTable;
+    }
+
+    public void setRawDefinition(String rawDefinition) {
+        this.rawDefinition = rawDefinition;
+    }
+
+    public String getRawDefinition() {
+        return rawDefinition;
     }
 }
