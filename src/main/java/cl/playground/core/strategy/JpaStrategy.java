@@ -1,9 +1,11 @@
 package cl.playground.core.strategy;
 
 import cl.playground.core.model.ColumnDefinition;
+import cl.playground.core.model.ForeignKeyDefinition;
+
+import java.util.stream.Collectors;
 
 public class JpaStrategy implements EntityStrategy {
-
     private final String importPrefix;
 
     public JpaStrategy(String type) {
@@ -13,36 +15,56 @@ public class JpaStrategy implements EntityStrategy {
     @Override
     public String addClassAnnotations(String tableName) {
         return "@Entity\n" +
-                "@Table(name = \"" + tableName + "\")\n";
+                "@Table(name = \"" + tableName.toLowerCase() + "\")\n";
     }
 
     @Override
-    public String addFieldAnnotations(ColumnDefinition column, boolean isForeignKey, boolean isPrimaryKey) {
+    public String addFieldAnnotations(ColumnDefinition column, ForeignKeyDefinition foreignKey, boolean isPrimaryKey) {
         StringBuilder annotations = new StringBuilder();
 
         if (isPrimaryKey) {
             annotations.append("    @Id\n")
                     .append("    @GeneratedValue(strategy = GenerationType.IDENTITY)\n")
                     .append("    @Column(name = \"").append(column.getColumnName()).append("\")\n");
-        } else if (isForeignKey) {
-            annotations.append("    @ManyToOne\n")
-                    .append("    @JoinColumn(name = \"").append(column.getColumnName())
-                    .append("\", nullable = ").append(column.isNullable() ? "true" : "false")
+        } else if (foreignKey != null) {
+            // Convertir el RelationshipType a la anotación JPA correspondiente
+            String relationshipAnnotation = switch (foreignKey.getRelationshipType()) {
+                case ONE_TO_ONE -> "@OneToOne";
+                case ONE_TO_MANY -> "@OneToMany";
+                case MANY_TO_ONE -> "@ManyToOne";
+                case MANY_TO_MANY -> "@ManyToMany";
+            };
+
+            annotations.append("    ")
+                    .append(relationshipAnnotation)
+                    .append("(fetch = FetchType.")
+                    .append(foreignKey.getFetchStrategy());
+
+            // Agregar cascade si existe
+            if (!foreignKey.getCascadeStrategies().isEmpty()) {
+                annotations.append(", cascade = {");
+                String cascades = foreignKey.getCascadeStrategies().stream()
+                        .map(cascade -> "CascadeType." + cascade)
+                        .collect(Collectors.joining(", "));
+                annotations.append(cascades).append("}");
+            }
+
+            annotations.append(")\n");
+
+            annotations.append("    @JoinColumn(name = \"")
+                    .append(foreignKey.getColumnName())
+                    .append("\", nullable = ")
+                    .append(column.isNullable())
                     .append(")\n");
         } else {
             annotations.append("    @Column(name = \"").append(column.getColumnName()).append("\"");
 
-            // Agregar longitud si existe
             if (column.getLength() != null) {
                 annotations.append(", length = ").append(column.getLength());
             }
-
-            // Agregar nullable si es false
             if (!column.isNullable()) {
                 annotations.append(", nullable = false");
             }
-
-            // Agregar unique si es true
             if (column.isUnique()) {
                 annotations.append(", unique = true");
             }
@@ -53,7 +75,6 @@ public class JpaStrategy implements EntityStrategy {
         return annotations.toString();
     }
 
-
     @Override
     public String addImports() {
         return String.format("""
@@ -63,8 +84,17 @@ public class JpaStrategy implements EntityStrategy {
             import %s.persistence.Id;
             import %s.persistence.GeneratedValue;
             import %s.persistence.GenerationType;
+            import %s.persistence.OneToOne;
+            import %s.persistence.OneToMany;
+            import %s.persistence.ManyToOne;
+            import %s.persistence.ManyToMany;
+            import %s.persistence.JoinColumn;
+            import %s.persistence.FetchType;
+            import %s.persistence.CascadeType;
             """,
                 importPrefix, importPrefix, importPrefix, importPrefix,
-                importPrefix, importPrefix, importPrefix, importPrefix);
+                importPrefix, importPrefix, importPrefix, importPrefix,
+                importPrefix, importPrefix, importPrefix, importPrefix,
+                importPrefix);
     }
 }

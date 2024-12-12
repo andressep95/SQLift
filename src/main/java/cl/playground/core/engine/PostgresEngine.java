@@ -94,7 +94,8 @@ public class PostgresEngine implements DatabaseEngine {
                             isNullable,
                             defaultValue,
                             isUnique,
-                            length
+                            length,
+                            true
                     );
                     tableDefinition.addColumn(column);
 
@@ -130,27 +131,40 @@ public class PostgresEngine implements DatabaseEngine {
 
     private void processRelationships(Map<String, ClassDefinition> classMap) {
         for (ClassDefinition classDefinition : classMap.values()) {
+            Map<String, ColumnDefinition> columnUpdates = new HashMap<>();
+
             for (ForeignKeyDefinition fk : classDefinition.getForeignKeys()) {
                 String referencedTableName = fk.getReferenceTableName();
                 ClassDefinition referencedClass = classMap.get(referencedTableName);
 
                 if (referencedClass != null) {
-                    String fieldName = fk.getColumnName().replace("_id", "");
+                    // Encontrar la columna original
+                    String originalColumnName = fk.getColumnName();
+                    String newFieldName = originalColumnName.replace("_id", "");
+
+                    // Crear la nueva columna manteniendo el mismo nombre que la FK
                     ColumnDefinition relationColumn = new ColumnDefinition(
-                            fieldName,                    // columnName
+                            originalColumnName,           // Mantener el nombre original
                             referencedClass.getClassName(), // columnType
                             true,                         // isNullable
                             null,                         // defaultValue
                             false,                        // isUnique
-                            null                          // length
+                            null,                         // length
+                            true                          // isForeignKey
                     );
-                    classDefinition.addAttribute(relationColumn);
 
-                    // Eliminar la columna original de FK
-                    classDefinition.getAttributes().removeIf(
-                            attr -> attr.getColumnName().equals(fk.getColumnName())
-                    );
+                    // Guardar para actualizar después
+                    columnUpdates.put(originalColumnName, relationColumn);
                 }
+            }
+
+            // Actualizar todas las columnas de una vez
+            for (Map.Entry<String, ColumnDefinition> update : columnUpdates.entrySet()) {
+                // Reemplazar la columna vieja por la nueva
+                classDefinition.getAttributes().removeIf(attr ->
+                        attr.getColumnName().equals(update.getKey())
+                );
+                classDefinition.addAttribute(update.getValue());
             }
         }
     }
