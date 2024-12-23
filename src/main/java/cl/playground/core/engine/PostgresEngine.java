@@ -8,49 +8,39 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PostgresEngine implements DatabaseEngine {
-    private static final Pattern TABLE_PATTERN = Pattern.compile(
-            "CREATE TABLE\\s+(\\w+)\\s*\\(([^;]+)\\);",
-            Pattern.CASE_INSENSITIVE
-    );
-    private static final Pattern COLUMN_PATTERN = Pattern.compile(
-            "(\\w+)\\s+(\\w+)(?:\\(([^)]+)\\))?(\\s+[^,]+)?",
-            Pattern.CASE_INSENSITIVE
-    );
-    private static final Pattern FOREIGN_KEY_PATTERN = Pattern.compile(
-            "REFERENCES\\s+(\\w+)\\s*\\((\\w+)\\)",
-            Pattern.CASE_INSENSITIVE
-    );
 
     @Override
     public Map<String, ClassDefinition> mapSqlToClassDefinitions(String sqlContent, String basePackage) {
         Map<String, ClassDefinition> classMap = new HashMap<>();
-        Map<String, TableDefinition> tableMap = new HashMap<>();
-        Matcher tableMatcher = TABLE_PATTERN.matcher(sqlContent);
+        Matcher tableMatcher = Pattern.compile("CREATE TABLE\\s+(\\w+)\\s*\\(([^;]+)\\);", Pattern.CASE_INSENSITIVE).matcher(sqlContent);
 
         while (tableMatcher.find()) {
             String tableName = tableMatcher.group(1).toLowerCase();
             String columnsDefinition = tableMatcher.group(2);
 
+            System.out.println("Procesando tabla: " + tableName);
             TableDefinition tableDefinition = parseTableDefinition(tableName, columnsDefinition);
-            tableMap.put(tableName, tableDefinition);
 
             String className = TypeMapper.toPascalCase(tableName);
             ClassDefinition classDefinition = new ClassDefinition(className, basePackage);
 
-            // Establecer primary key
-            if (tableDefinition.getPrimaryKey() != null) {
-                classDefinition.setPrimaryKey(tableDefinition.getPrimaryKey());
+            // Establecer clave primaria
+            if (!tableDefinition.getPrimaryKeyColumns().isEmpty()) {
+                System.out.println("Claves primarias detectadas para la tabla " + tableName + ": " + tableDefinition.getPrimaryKeyColumns());
+                classDefinition.setPrimaryKeyColumns(tableDefinition.getPrimaryKeyColumns());
             }
 
             // Agregar columnas regulares
             for (ColumnDefinition column : tableDefinition.getColumns()) {
-                if (!column.equals(tableDefinition.getPrimaryKey())) {
+                if (!tableDefinition.getPrimaryKeyColumns().contains(column)) {
+                    System.out.println("Agregando atributo: " + column);
                     classDefinition.addAttribute(column);
                 }
             }
 
-            // Agregar foreign keys
+            // Agregar claves foráneas
             for (ForeignKeyDefinition fk : tableDefinition.getForeignKeys()) {
+                System.out.println("Agregando clave foránea: " + fk);
                 classDefinition.addForeignKey(fk);
             }
 
@@ -58,75 +48,107 @@ public class PostgresEngine implements DatabaseEngine {
         }
 
         processRelationships(classMap);
+        System.out.println("Clases generadas: " + classMap);
         return classMap;
     }
 
+    @Override
     public String mapDataType(String sqlType, String columnName, boolean isForeignKey) {
-        return TypeMapper.mapPostgresType(sqlType, columnName, isForeignKey);
+        String mappedType = TypeMapper.mapPostgresType(sqlType, columnName, isForeignKey);
+        System.out.println("Mapeando tipo SQL: " + sqlType + " a tipo Java: " + mappedType);
+        return mappedType;
     }
-
 
     private TableDefinition parseTableDefinition(String tableName, String columnsDefinition) {
         TableDefinition tableDefinition = new TableDefinition(tableName);
-        Matcher columnMatcher = COLUMN_PATTERN.matcher(columnsDefinition);
+        Matcher columnMatcher = Pattern.compile("(\\w+)\\s+(\\w+)(?:\\(([^)]+)\\))?(\\s+[^,]+)?", Pattern.CASE_INSENSITIVE).matcher(columnsDefinition);
 
         while (columnMatcher.find()) {
             String columnName = columnMatcher.group(1);
             String columnType = columnMatcher.group(2);
-            String size = columnMatcher.group(3);
             String constraints = columnMatcher.group(4);
 
-            boolean isNullable = constraints == null || !constraints.toLowerCase().contains("not null");
-            boolean isUnique = constraints != null && constraints.toLowerCase().contains("unique");
-            String defaultValue = extractDefaultValue(constraints);
-            String length = columnType.toLowerCase().contains("varchar") ? size : null;
-
-            // Verificar si es foreign key primero
-            if (constraints != null) {
-                Matcher fkMatcher = FOREIGN_KEY_PATTERN.matcher(constraints);
-                if (fkMatcher.find()) {
-                    String referencedTableName = fkMatcher.group(1).toLowerCase();
-                    String referencedColumnName = fkMatcher.group(2);
-                    // Para foreign keys, usamos el tipo de la entidad referenciada
-                    ColumnDefinition column = new ColumnDefinition(
-                            columnName,
-                            referencedTableName,
-                            isNullable,
-                            defaultValue,
-                            isUnique,
-                            length,
-                            true
-                    );
-                    tableDefinition.addColumn(column);
-
-                    ForeignKeyDefinition fk = new ForeignKeyDefinition(
-                            columnName,
-                            referencedTableName,
-                            referencedColumnName
-                    );
-                    tableDefinition.addForeignKey(fk);
-                    continue;
-                }
+            // Ignorar palabras clave PRIMARY y FOREIGN
+            if (columnName.equalsIgnoreCase("PRIMARY") || columnName.equalsIgnoreCase("FOREIGN")) {
+                continue;
             }
 
-            // Para columnas normales
-            ColumnDefinition column = new ColumnDefinition(
-                    columnName,
-                    columnType,
-                    isNullable,
-                    defaultValue,
-                    isUnique,
-                    length
-            );
+            System.out.println("Procesando columna: " + columnName);
+            ColumnDefinition column = identifyColumnConstraints(columnName, columnType, constraints);
+            tableDefinition.addColumn(column);
 
-            if (isPrimaryKey(constraints)) {
-                tableDefinition.setPrimaryKey(column);
-            } else {
-                tableDefinition.addColumn(column);
+            if (constraints != null) {
+                identifyForeignKeys(constraints, columnName, tableDefinition);
             }
         }
 
+        // Detectar clave primaria
+        identifyPrimaryKey(columnsDefinition, tableDefinition);
+
         return tableDefinition;
+    }
+
+    private void identifyPrimaryKey(String columnsDefinition, TableDefinition tableDefinition) {
+        Matcher primaryKeyMatcher = Pattern.compile("PRIMARY KEY\\s*\\(([^)]+)\\)", Pattern.CASE_INSENSITIVE).matcher(columnsDefinition);
+        if (primaryKeyMatcher.find()) {
+            String[] primaryKeyColumns = primaryKeyMatcher.group(1).split(",");
+            for (String pkColumn : primaryKeyColumns) {
+                pkColumn = pkColumn.trim();
+                ColumnDefinition column = tableDefinition.getColumnByName(pkColumn);
+                if (column != null) {
+                    tableDefinition.addPrimaryKeyColumn(column);
+                    System.out.println("Clave primaria compuesta detectada: " + pkColumn);
+                }
+            }
+        }
+    }
+
+    private void identifyForeignKeys(String constraints, String columnName, TableDefinition tableDefinition) {
+        Matcher fkMatcher = Pattern.compile("FOREIGN KEY\\s*\\(([^)]+)\\)\\s+REFERENCES\\s+(\\w+)\\s*\\((\\w+)\\)", Pattern.CASE_INSENSITIVE).matcher(constraints);
+        if (fkMatcher.find()) {
+            String referencedTableName = fkMatcher.group(2).toLowerCase();
+            String referencedColumnName = fkMatcher.group(3);
+            System.out.println("Clave foránea detectada en columna: " + columnName + ", referencia a: " + referencedTableName + "(" + referencedColumnName + ")");
+
+            ForeignKeyDefinition fk = new ForeignKeyDefinition(
+                columnName,
+                referencedTableName,
+                referencedColumnName
+            );
+            tableDefinition.addForeignKey(fk);
+        }
+    }
+
+    private ColumnDefinition identifyColumnConstraints(String columnName, String columnType, String constraints) {
+        boolean isNullable = constraints == null || !constraints.toLowerCase().contains("not null");
+        boolean isUnique = constraints != null && constraints.toLowerCase().contains("unique");
+        String defaultValue = extractDefaultValue(constraints);
+        String length = columnType.toLowerCase().contains("varchar") ? extractLength(columnType) : null;
+
+        ColumnDefinition column = new ColumnDefinition(
+            columnName,
+            columnType,
+            isNullable,
+            defaultValue,
+            isUnique,
+            length
+        );
+
+        System.out.println("Restricciones de columna detectadas: " + column);
+        return column;
+    }
+
+    private String extractDefaultValue(String constraints) {
+        if (constraints == null) return null;
+        Matcher defaultMatcher = Pattern.compile("DEFAULT\\s+([^\\s,]+)", Pattern.CASE_INSENSITIVE).matcher(constraints);
+        String defaultValue = defaultMatcher.find() ? defaultMatcher.group(1) : null;
+        System.out.println("Valor por defecto extraído: " + defaultValue);
+        return defaultValue;
+    }
+
+    private String extractLength(String columnType) {
+        Matcher lengthMatcher = Pattern.compile("\\((\\d+)\\)").matcher(columnType);
+        return lengthMatcher.find() ? lengthMatcher.group(1) : null;
     }
 
     private void processRelationships(Map<String, ClassDefinition> classMap) {
@@ -138,47 +160,30 @@ public class PostgresEngine implements DatabaseEngine {
                 ClassDefinition referencedClass = classMap.get(referencedTableName);
 
                 if (referencedClass != null) {
-                    // Encontrar la columna original
                     String originalColumnName = fk.getColumnName();
                     String newFieldName = originalColumnName.replace("_id", "");
 
-                    // Crear la nueva columna manteniendo el mismo nombre que la FK
+                    System.out.println("Procesando relación: " + classDefinition.getClassName() + " -> " + referencedClass.getClassName());
+
                     ColumnDefinition relationColumn = new ColumnDefinition(
-                            originalColumnName,           // Mantener el nombre original
-                            referencedClass.getClassName(), // columnType
-                            true,                         // isNullable
-                            null,                         // defaultValue
-                            false,                        // isUnique
-                            null,                         // length
-                            true                          // isForeignKey
+                        originalColumnName,
+                        referencedClass.getClassName(),
+                        true,
+                        null,
+                        false,
+                        null
                     );
 
-                    // Guardar para actualizar después
                     columnUpdates.put(originalColumnName, relationColumn);
                 }
             }
 
-            // Actualizar todas las columnas de una vez
             for (Map.Entry<String, ColumnDefinition> update : columnUpdates.entrySet()) {
-                // Reemplazar la columna vieja por la nueva
                 classDefinition.getAttributes().removeIf(attr ->
                         attr.getColumnName().equals(update.getKey())
-                );
+                                                        );
                 classDefinition.addAttribute(update.getValue());
             }
         }
-    }
-
-    private boolean isPrimaryKey(String constraints) {
-        return constraints != null &&
-                (constraints.toLowerCase().contains("primary key") ||
-                        constraints.toLowerCase().contains("serial primary"));
-    }
-
-    private String extractDefaultValue(String constraints) {
-        if (constraints == null) return null;
-        Pattern defaultPattern = Pattern.compile("DEFAULT\\s+([^\\s,]+)", Pattern.CASE_INSENSITIVE);
-        Matcher defaultMatcher = defaultPattern.matcher(constraints);
-        return defaultMatcher.find() ? defaultMatcher.group(1) : null;
     }
 }

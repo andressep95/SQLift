@@ -1,21 +1,19 @@
 package cl.playground.core.builder;
 
-import cl.playground.core.engine.DatabaseEngine;
 import cl.playground.core.model.ClassDefinition;
 import cl.playground.core.model.ColumnDefinition;
-import cl.playground.core.strategy.EntityStrategy;
 import cl.playground.core.model.ForeignKeyDefinition;
+import cl.playground.core.strategy.EntityStrategy;
 
 import java.util.List;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 public class EntityBuilder {
-    private final DatabaseEngine engine;
+
     private final List<EntityStrategy> strategies;
     private ClassDefinition classDefinition;
 
-    public EntityBuilder(DatabaseEngine engine, List<EntityStrategy> strategies) {
-        this.engine = engine;
+    public EntityBuilder(List<EntityStrategy> strategies) {
         this.strategies = strategies;
     }
 
@@ -25,98 +23,77 @@ public class EntityBuilder {
     }
 
     public String build() {
-        if (classDefinition.getPrimaryKey() == null) {
-            throw new IllegalStateException("No primary key defined for class " + classDefinition.getClassName());
+        if (classDefinition == null) {
+            throw new IllegalStateException("ClassDefinition must be set before building.");
         }
 
-        StringBuilder classContent = new StringBuilder();
+        StringBuilder entity = new StringBuilder();
 
-        // Package declaration
-        classContent.append("package ").append(classDefinition.getPackageName()).append(";\n\n");
+        // Add package
+        entity.append("package ").append(classDefinition.getPackageName()).append(";\n\n");
 
-        // Imports
-        addImports(classContent);
-
-        // Class annotations
+        // Add imports
         for (EntityStrategy strategy : strategies) {
-            classContent.append(strategy.addClassAnnotations(classDefinition.getClassName()));
+            entity.append(strategy.addImports()).append("\n");
         }
 
-        // Class declaration
-        classContent.append("public class ").append(classDefinition.getClassName()).append(" {\n\n");
-
-        // 1. Primary Key
-        if (classDefinition.getPrimaryKey() != null) {
-            addField(classContent, classDefinition.getPrimaryKey(), false, true);
+        // Add class annotations dynamically
+        for (EntityStrategy strategy : strategies) {
+            entity.append(strategy.addClassAnnotations(classDefinition.getClassName(), classDefinition));
         }
 
-        // 2. Foreign Keys
-        List<ForeignKeyDefinition> foreignKeys = classDefinition.getForeignKeys();
-        List<ColumnDefinition> attributes = classDefinition.getAttributes();
-        for (ColumnDefinition column : attributes) {
-            if (column.isForeignKey()) {
-                addField(classContent, column, true, false);
+        // Add class declaration
+        entity.append("public class ").append(classDefinition.getClassName()).append(" {\n\n");
+
+        // Handle primary key
+        if (!classDefinition.getPrimaryKeyColumns().isEmpty()) {
+            if (classDefinition.getPrimaryKeyColumns().size() > 1) {
+                entity.append(generateCompositePrimaryKeyClass());
+            } else {
+                ColumnDefinition primaryKey = classDefinition.getPrimaryKeyColumns().get(0);
+                addField(entity, primaryKey, false, true);
             }
         }
 
-        // 3. Regular fields
-        for (ColumnDefinition column : attributes) {
-            if (isRegularField(column, foreignKeys)) {
-                addField(classContent, column, false, false);
+        // Add fields
+        for (ColumnDefinition column : classDefinition.getAttributes()) {
+            for (EntityStrategy strategy : strategies) {
+                ForeignKeyDefinition foreignKey = classDefinition.getForeignKeys().stream()
+                    .filter(fk -> fk.getColumnName().equals(column.getColumnName()))
+                    .findFirst().orElse(null);
+
+                boolean isPrimaryKey = classDefinition.getPrimaryKeyColumns().contains(column);
+                entity.append(strategy.addFieldAnnotations(column, foreignKey, isPrimaryKey));
             }
+
+            entity.append("    private ")
+                .append(mapDataType(column.getColumnType())).append(" ")
+                .append(toCamelCase(column.getColumnName())).append(";\n");
         }
 
-        // Empty line
-        classContent.append("\n");
-
-        // Only generate constructors, getters and setters if Lombok is not being used
+        entity.append("\n");
+        // Add constructor and methods if no Lombok
         boolean usesLombok = strategies.stream().anyMatch(s -> s.getClass().getSimpleName().equals("LombokStrategy"));
 
         if (!usesLombok) {
-            // Default Constructor
-            addDefaultConstructor(classContent);
-
-            // All args Constructor
-            addAllArgsConstructor(classContent);
-
-            // Getters and Setters
-            addGettersAndSetters(classContent);
+            addDefaultConstructor(entity);
+            addAllArgsConstructor(entity);
+            addGettersAndSetters(entity);
         }
 
         // Close class
-        classContent.append("}");
+        entity.append("}");
 
-        return classContent.toString();
-    }
-
-    private boolean isRegularField(ColumnDefinition column, List<ForeignKeyDefinition> foreignKeys) {
-        return !column.isForeignKey() &&
-                !column.getColumnName().equals(classDefinition.getPrimaryKey().getColumnName());
-    }
-
-
-    private void addImports(StringBuilder classContent) {
-        // Base imports
-        Set<String> imports = classDefinition.getImports();
-        for (String importStatement : imports) {
-            classContent.append("import ").append(importStatement).append(";\n");
-        }
-
-        // Strategy imports
-        for (EntityStrategy strategy : strategies) {
-            classContent.append(strategy.addImports());
-        }
-        classContent.append("\n");
+        return entity.toString();
     }
 
     private void addField(StringBuilder classContent, ColumnDefinition column, boolean isForeignKey, boolean isPrimaryKey) {
-        // Obtener la ForeignKeyDefinition correspondiente si es una FK
+        // Obtener la definición de clave foránea si aplica
         ForeignKeyDefinition foreignKey = null;
         if (isForeignKey) {
             foreignKey = classDefinition.getForeignKeys().stream()
-                    .filter(fk -> fk.getColumnName().equals(column.getColumnName()))
-                    .findFirst()
-                    .orElse(null);
+                .filter(fk -> fk.getColumnName().equals(column.getColumnName()))
+                .findFirst().orElse(null);
         }
 
         // Aplicar las anotaciones de cada estrategia
@@ -124,20 +101,56 @@ public class EntityBuilder {
             classContent.append(strategy.addFieldAnnotations(column, foreignKey, isPrimaryKey));
         }
 
-        String javaType = engine.mapDataType(
-                column.getColumnType(),
-                column.getColumnName(),
-                isForeignKey
-        );
-
-        String fieldName = toCamelCase(column.getColumnName().replace("_id", ""));
+        // Generar la definición del campo
+        String javaType = mapDataType(column.getColumnType());
+        String fieldName = toCamelCase(column.getColumnName());
         classContent.append("    private ").append(javaType).append(" ").append(fieldName).append(";\n");
     }
 
+    private String mapDataType(String sqlType) {
+        return switch (sqlType.toUpperCase()) {
+            case "SERIAL" -> "Long";
+            case "VARCHAR" -> "String";
+            case "INTEGER" -> "Integer";
+            case "NUMERIC" -> "java.math.BigDecimal";
+            case "DATE" -> "java.time.LocalDate";
+            default -> "Object"; // Fallback for unmapped types
+        };
+    }
+
+    private String generateCompositePrimaryKeyClass() {
+        StringBuilder compositeKeyClass = new StringBuilder();
+        compositeKeyClass.append("@Embeddable\n")
+            .append("public static class ")
+            .append(classDefinition.getClassName()).append("Id {\n");
+
+        for (ColumnDefinition pkColumn : classDefinition.getPrimaryKeyColumns()) {
+            compositeKeyClass.append("    private ")
+                .append(mapDataType(pkColumn.getColumnType())).append(" ")
+                .append(toCamelCase(pkColumn.getColumnName())).append(";\n");
+        }
+
+        compositeKeyClass.append("\n    // Getters and Setters\n");
+        for (ColumnDefinition pkColumn : classDefinition.getPrimaryKeyColumns()) {
+            String fieldName = toCamelCase(pkColumn.getColumnName());
+            String capitalizedField = capitalize(fieldName);
+
+            compositeKeyClass.append("    public ")
+                .append(mapDataType(pkColumn.getColumnType())).append(" get").append(capitalizedField).append("() {\n")
+                .append("        return ").append(fieldName).append(";\n    }\n\n");
+
+            compositeKeyClass.append("    public void set").append(capitalizedField).append("(")
+                .append(mapDataType(pkColumn.getColumnType())).append(" ").append(fieldName).append(") {\n")
+                .append("        this.").append(fieldName).append(" = ").append(fieldName).append(";\n    }\n\n");
+        }
+
+        compositeKeyClass.append("}\n\n");
+
+        return compositeKeyClass.toString();
+    }
 
     private void addDefaultConstructor(StringBuilder classContent) {
-        classContent.append("    public ").append(classDefinition.getClassName())
-                .append("() {\n    }\n\n");
+        classContent.append("    public ").append(classDefinition.getClassName()).append("() {\n    }\n\n");
     }
 
     private void addAllArgsConstructor(StringBuilder classContent) {
@@ -146,99 +159,71 @@ public class EntityBuilder {
         // Parameters
         boolean first = true;
 
-        // Primary Key parameter
-        if (classDefinition.getPrimaryKey() != null) {
-            String type = engine.mapDataType(
-                    classDefinition.getPrimaryKey().getColumnType(),
-                    classDefinition.getPrimaryKey().getColumnName(),
-                    false
-            );
-            String name = toCamelCase(classDefinition.getPrimaryKey().getColumnName());
-            classContent.append(type).append(" ").append(name);
+        // Add primary key columns first
+        for (ColumnDefinition pkColumn : classDefinition.getPrimaryKeyColumns()) {
+            if (!first) classContent.append(", ");
             first = false;
+
+            String type = mapDataType(pkColumn.getColumnType());
+            String name = toCamelCase(pkColumn.getColumnName());
+            classContent.append(type).append(" ").append(name);
         }
 
-        // Other parameters
-        List<ForeignKeyDefinition> foreignKeys = classDefinition.getForeignKeys();
-
+        // Add other attributes
         for (ColumnDefinition column : classDefinition.getAttributes()) {
             if (!first) classContent.append(", ");
-
-            boolean isForeignKey = foreignKeys.stream()
-                    .anyMatch(fk -> fk.getColumnName().equals(column.getColumnName()));
-
-            String type = engine.mapDataType(column.getColumnType(), column.getColumnName(), isForeignKey);
-            String name = isForeignKey ?
-                    toCamelCase(column.getColumnName().replace("_id", "")) :
-                    toCamelCase(column.getColumnName());
-
-            classContent.append(type).append(" ").append(name);
             first = false;
-        }
 
+            String type = mapDataType(column.getColumnType());
+            String name = toCamelCase(column.getColumnName());
+            classContent.append(type).append(" ").append(name);
+        }
         classContent.append(") {\n");
 
-        // Constructor body
-        if (classDefinition.getPrimaryKey() != null) {
-            String name = toCamelCase(classDefinition.getPrimaryKey().getColumnName());
+        // Constructor body for primary key columns
+        for (ColumnDefinition pkColumn : classDefinition.getPrimaryKeyColumns()) {
+            String name = toCamelCase(pkColumn.getColumnName());
             classContent.append("        this.").append(name).append(" = ").append(name).append(";\n");
         }
 
+        // Constructor body for other attributes
         for (ColumnDefinition column : classDefinition.getAttributes()) {
-            boolean isForeignKey = foreignKeys.stream()
-                    .anyMatch(fk -> fk.getColumnName().equals(column.getColumnName()));
-
-            String name = isForeignKey ?
-                    toCamelCase(column.getColumnName().replace("_id", "")) :
-                    toCamelCase(column.getColumnName());
-
+            String name = toCamelCase(column.getColumnName());
             classContent.append("        this.").append(name).append(" = ").append(name).append(";\n");
         }
-
         classContent.append("    }\n\n");
     }
 
     private void addGettersAndSetters(StringBuilder classContent) {
-        // Primary key
-        if (classDefinition.getPrimaryKey() != null) {
-            addAccessors(classContent, classDefinition.getPrimaryKey(), false);
+        for (ColumnDefinition column : classDefinition.getPrimaryKeyColumns()) {
+            String type = mapDataType(column.getColumnType());
+            String fieldName = toCamelCase(column.getColumnName());
+            String capitalizedField = capitalize(fieldName);
+
+            // Getter
+            classContent.append("    public ").append(type).append(" get").append(capitalizedField).append("() {\n")
+                .append("        return ").append(fieldName).append(";\n    }\n\n");
+
+            // Setter
+            classContent.append("    public void set").append(capitalizedField).append("(").append(type)
+                .append(" ").append(fieldName).append(") {\n")
+                .append("        this.").append(fieldName).append(" = ").append(fieldName).append(";\n    }\n\n");
         }
 
-        // Other fields
-        List<ForeignKeyDefinition> foreignKeys = classDefinition.getForeignKeys();
         for (ColumnDefinition column : classDefinition.getAttributes()) {
-            boolean isForeignKey = foreignKeys.stream()
-                    .anyMatch(fk -> fk.getColumnName().equals(column.getColumnName()));
-            addAccessors(classContent, column, isForeignKey);
+            String type = mapDataType(column.getColumnType());
+            String fieldName = toCamelCase(column.getColumnName());
+            String capitalizedField = capitalize(fieldName);
+
+            // Getter
+            classContent.append("    public ").append(type).append(" get").append(capitalizedField).append("() {\n")
+                .append("        return ").append(fieldName).append(";\n    }\n\n");
+
+            // Setter
+            classContent.append("    public void set").append(capitalizedField).append("(").append(type)
+                .append(" ").append(fieldName).append(") {\n")
+                .append("        this.").append(fieldName).append(" = ").append(fieldName).append(";\n    }\n\n");
         }
-    }
-
-    private void addAccessors(StringBuilder classContent, ColumnDefinition column, boolean isForeignKey) {
-        ForeignKeyDefinition foreignKey = null;
-        if (isForeignKey) {
-            foreignKey = classDefinition.getForeignKeys().stream()
-                    .filter(fk -> fk.getColumnName().equals(column.getColumnName()))
-                    .findFirst()
-                    .orElse(null);
-        }
-
-        String javaType = engine.mapDataType(column.getColumnType(), column.getColumnName(), isForeignKey);
-        String fieldName = isForeignKey ?
-                toCamelCase(column.getColumnName().replace("_id", "")) :
-                toCamelCase(column.getColumnName());
-        String methodName = capitalize(fieldName);
-
-        // Getter
-        classContent.append("    public ").append(javaType).append(" get")
-                .append(methodName).append("() {\n");
-        classContent.append("        return ").append(fieldName).append(";\n");
-        classContent.append("    }\n\n");
-
-        // Setter
-        classContent.append("    public void set").append(methodName)
-                .append("(").append(javaType).append(" ").append(fieldName).append(") {\n");
-        classContent.append("        this.").append(fieldName).append(" = ").append(fieldName).append(";\n");
-        classContent.append("    }\n\n");
     }
 
     private String capitalize(String str) {
@@ -247,21 +232,17 @@ public class EntityBuilder {
 
     private String toCamelCase(String input) {
         StringBuilder result = new StringBuilder();
-        boolean nextUpperCase = false;
-
-        for (char c : input.toLowerCase().toCharArray()) {
+        boolean capitalizeNext = false;
+        for (char c : input.toCharArray()) {
             if (c == '_') {
-                nextUpperCase = true;
+                capitalizeNext = true;
+            } else if (capitalizeNext) {
+                result.append(Character.toUpperCase(c));
+                capitalizeNext = false;
             } else {
-                if (nextUpperCase) {
-                    result.append(Character.toUpperCase(c));
-                    nextUpperCase = false;
-                } else {
-                    result.append(c);
-                }
+                result.append(Character.toLowerCase(c));
             }
         }
-
         return result.toString();
     }
 }

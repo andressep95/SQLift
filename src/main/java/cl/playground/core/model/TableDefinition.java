@@ -9,6 +9,7 @@ public class TableDefinition {
     private ColumnDefinition primaryKey;
     private final List<ColumnDefinition> columns;
     private final List<ForeignKeyDefinition> foreignKeys;
+    private final List<ColumnDefinition> primaryKeyColumns = new ArrayList<>();
 
 
     public TableDefinition(String tableName) {
@@ -42,5 +43,32 @@ public class TableDefinition {
 
     public void addForeignKey(ForeignKeyDefinition foreignKey) {
         this.foreignKeys.add(foreignKey);
+    }
+
+
+    public List<ColumnDefinition> getPrimaryKeyColumns() {
+        return primaryKeyColumns;
+    }
+
+    public void addPrimaryKeyColumn(ColumnDefinition column) {
+        primaryKeyColumns.add(column);
+    }
+
+    public ColumnDefinition getColumnByName(String columnName) {
+        return this.columns.stream()
+            .filter(column -> column.getColumnName().equalsIgnoreCase(columnName))
+            .findFirst()
+            .orElse(null);
+    }
+
+    @Override
+    public String toString() {
+        return "TableDefinition{" +
+            "tableName='" + tableName + '\'' +
+            ", primaryKey=" + primaryKey +
+            ", columns=" + columns +
+            ", foreignKeys=" + foreignKeys +
+            ", primaryKeyColumns=" + primaryKeyColumns +
+            '}';
     }
 }

@@ -59,4 +59,17 @@ public class ColumnDefinition {
     public void setForeignKey(boolean foreignKey) {
         this.isForeignKey = foreignKey;
     }
+
+    @Override
+    public String toString() {
+        return "ColumnDefinition{" +
+            "columnName='" + columnName + '\'' +
+            ", columnType='" + columnType + '\'' +
+            ", isNullable=" + isNullable +
+            ", defaultValue='" + defaultValue + '\'' +
+            ", isUnique=" + isUnique +
+            ", length='" + length + '\'' +
+            ", isForeignKey=" + isForeignKey +
+            '}';
+    }
 }

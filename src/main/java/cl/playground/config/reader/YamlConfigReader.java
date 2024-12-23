@@ -27,5 +27,4 @@ public class YamlConfigReader {
             throw new ConfigurationException("Failed to read configuration file", e);
         }
     }
-
 }

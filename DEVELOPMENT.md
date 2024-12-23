@@ -9,10 +9,10 @@
 
 ## Installation
 
-| Command                               | Description |
-|---------------------------------------|-------------|
-| `mv target/sqlift /usr/local/bin/`    | Move the compiled executable to PATH for system-wide access. |
-| `rm /usr/local/bin/<executable-name>` | Remove the executable from PATH if you need to recompile or fix errors. |
+| Command                            | Description |
+|------------------------------------|-------------|
+| `mv target/sqlift /usr/local/bin/` | Move the compiled executable to PATH for system-wide access. |
+| `rm /usr/local/bin/sqlift`         | Remove the executable from PATH if you need to recompile or fix errors. |
 
 ## Environment Setup
 

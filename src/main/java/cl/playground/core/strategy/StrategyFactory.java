@@ -7,23 +7,18 @@ import java.util.List;
 
 public class StrategyFactory {
 
-    public static List<EntityStrategy> createStrategies(boolean useLombok, SqliftConfig.JpaConfig jpaConfig) {
+    public static List<EntityStrategy> createStrategies(boolean useLombok, boolean useJpa) {
         List<EntityStrategy> strategies = new ArrayList<>();
 
         if (useLombok) {
             strategies.add(new LombokStrategy());
         }
 
-        if (jpaConfig != null && jpaConfig.isEnabled()) {
-            String type = jpaConfig.getType();
-            if (type == null || (!type.equalsIgnoreCase("jakarta") && !type.equalsIgnoreCase("javax"))) {
-                type = "javax"; // Valor por defecto
-            }
-            strategies.add(new JpaStrategy(type));
+        if (useJpa) {
+            strategies.add(new JpaStrategy());
         }
 
+        System.out.println("Estrategias creadas: " + strategies);
         return strategies;
     }
-
-
 }

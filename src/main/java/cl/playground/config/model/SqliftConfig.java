@@ -112,7 +112,7 @@ public class SqliftConfig {
     // Clase interna para las opciones
     public static class Options {
         private boolean lombok;
-        private JpaConfig jpa;
+        private boolean jpa;
 
         public Options() {
         }
@@ -126,11 +126,11 @@ public class SqliftConfig {
             this.lombok = lombok;
         }
 
-        public JpaConfig getJpa() {
+        public boolean isJpa() {
             return jpa;
         }
 
-        public void setJpa(JpaConfig jpa) {
+        public void setJpa(boolean jpa) {
             this.jpa = jpa;
         }
 
@@ -139,39 +139,6 @@ public class SqliftConfig {
             return "Options{" +
                     "lombok=" + lombok +
                     ", jpa=" + jpa +
-                    '}';
-        }
-    }
-
-    public static class JpaConfig {
-        private boolean enabled;
-        private String type;  // "jakarta" o "javax"
-
-        public JpaConfig() {
-        }
-
-        // getters y setters
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public String getType() {
-            return type;
-        }
-
-        public void setType(String type) {
-            this.type = type;
-        }
-
-        @Override
-        public String toString() {
-            return "JpaConfig{" +
-                    "enabled=" + enabled +
-                    ", type='" + type + '\'' +
                     '}';
         }
     }

@@ -27,9 +27,7 @@ public class InitCommand implements Runnable {
                 "    package: \"com.example.demo.entity\"\n" +
                 "    options:\n" +
                 "      lombok: false\n" +
-                "      jpa:\n" +
-                "        enabled: true\n" +
-                "        type: \"jakarta\"  # o \"javax\"\n";
+                "      jpa: true\n";
 
         writeToFile("sqlift.yaml", yamlContent);
     }

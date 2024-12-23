@@ -10,6 +10,7 @@ public class ClassDefinition {
     private final String className;
     private final String packageName;
     private ColumnDefinition primaryKey;
+    private final List<ColumnDefinition> primaryKeyColumns = new ArrayList<>();
     private final List<ColumnDefinition> attributes;
     private final List<ForeignKeyDefinition> foreignKeys;
     private final Set<String> imports;
@@ -60,5 +61,27 @@ public class ClassDefinition {
 
     public Set<String> getImports() {
         return imports;
+    }
+
+    public List<ColumnDefinition> getPrimaryKeyColumns() {
+        return primaryKeyColumns;
+    }
+
+    public void setPrimaryKeyColumns(List<ColumnDefinition> primaryKeyColumns) {
+        this.primaryKeyColumns.clear();
+        this.primaryKeyColumns.addAll(primaryKeyColumns);
+    }
+
+    @Override
+    public String toString() {
+        return "ClassDefinition{" +
+            "className='" + className + '\'' +
+            ", packageName='" + packageName + '\'' +
+            ", primaryKey=" + primaryKey +
+            ", primaryKeyColumns=" + primaryKeyColumns +
+            ", attributes=" + attributes +
+            ", foreignKeys=" + foreignKeys +
+            ", imports=" + imports +
+            '}';
     }
 }

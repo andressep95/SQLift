@@ -65,23 +65,24 @@ public class GenerateCommand implements Runnable {
         SqliftConfig config = YamlConfigReader.readConfig(configPath);
 
         // Validar configuración requerida
-        if (config == null || config.getSql() == null || config.getSql().getOutput() == null ||
-                config.getSql().getOutput().getOptions() == null || config.getSql().getOutput().getOptions().getJpa() == null) {
+        if (config == null || config.getSql() == null || config.getSql().getOutput() == null) {
             throw new ConfigurationException("Invalid YAML: Missing required fields.");
         }
+
+        SqliftConfig.OutputConfig outputConfig = config.getSql().getOutput();
+        SqliftConfig.Options options = outputConfig.getOptions();
 
         // Almacenar datos relevantes
         context.put("config", config);
         context.put("engine", config.getSql().getEngine());
         context.put("schema", config.getSql().getSchema());
-        context.put("outputPackage", config.getSql().getOutput().getPackageName());
-        context.put("useLombok", config.getSql().getOutput().getOptions().isLombok());
+        context.put("outputPackage", outputConfig.getPackageName());
+        context.put("useLombok", options != null && options.isLombok());
+        context.put("useJpa", options != null && options.isJpa());
 
         System.out.println("✔ YAML configuration loaded successfully.");
         System.out.println(config.toString());
 
-
         return context;
     }
-
 }

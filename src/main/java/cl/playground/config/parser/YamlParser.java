@@ -93,32 +93,10 @@ public class YamlParser {
             if (line.startsWith("lombok:")) {
                 options.setLombok(Boolean.parseBoolean(extractValue(line)));
             } else if (line.startsWith("jpa:")) {
-                SqliftConfig.JpaConfig jpaConfig = new SqliftConfig.JpaConfig();
-                options.setJpa(jpaConfig);
-                parseJpaConfig(br, jpaConfig);
+                options.setJpa(Boolean.parseBoolean(extractValue(line)));
             }
         }
     }
-
-    private void parseJpaConfig(BufferedReader br, SqliftConfig.JpaConfig jpaConfig) throws IOException {
-        String line;
-        while ((line = br.readLine()) != null) {
-            if (!line.startsWith(INDENT + INDENT + INDENT + INDENT)) {
-                break;
-            }
-            line = line.trim();
-            if (isSkippable(line)) {
-                continue;
-            }
-
-            if (line.startsWith("enabled:")) {
-                jpaConfig.setEnabled(Boolean.parseBoolean(extractValue(line)));
-            } else if (line.startsWith("type:")) {
-                jpaConfig.setType(extractValue(line));
-            }
-        }
-    }
-
 
     private String extractValue(String line) {
         String[] parts = line.split(":", 2);
@@ -130,27 +108,23 @@ public class YamlParser {
     }
 
     private void validateConfig(SqliftConfig config) {
-        if (config.getVersion() == null || config.getVersion().trim().isEmpty()) {
-            throw new ConfigurationException("Version is required");
-        }
-
+        checkNotNullOrEmpty(config.getVersion(), "Version is required");
         SqliftConfig.SqlConfig sql = config.getSql();
         if (sql == null) {
             throw new ConfigurationException("SQL configuration is required");
         }
+        checkNotNullOrEmpty(sql.getEngine(), "Database engine is required");
+        checkNotNullOrEmpty(sql.getSchema(), "Schema file path is required");
 
-        if (sql.getEngine() == null || sql.getEngine().trim().isEmpty()) {
-            throw new ConfigurationException("Database engine is required");
-        }
-
-        if (sql.getSchema() == null || sql.getSchema().trim().isEmpty()) {
-            throw new ConfigurationException("Schema file path is required");
-        }
-
-        if (sql.getOutput() == null ||
-                sql.getOutput().getPackageName() == null ||
-                sql.getOutput().getPackageName().trim().isEmpty()) {
+        SqliftConfig.OutputConfig output = sql.getOutput();
+        if (output == null || output.getPackageName() == null || output.getPackageName().trim().isEmpty()) {
             throw new ConfigurationException("Output package configuration is required");
+        }
+    }
+
+    private void checkNotNullOrEmpty(String value, String errorMessage) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new ConfigurationException(errorMessage);
         }
     }
 }

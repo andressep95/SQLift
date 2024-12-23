@@ -1,21 +1,35 @@
 package cl.playground.core.strategy;
 
+import cl.playground.core.model.ClassDefinition;
 import cl.playground.core.model.ColumnDefinition;
 import cl.playground.core.model.ForeignKeyDefinition;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class JpaStrategy implements EntityStrategy {
-    private final String importPrefix;
-
-    public JpaStrategy(String type) {
-        this.importPrefix = (type != null && type.equalsIgnoreCase("jakarta")) ? "jakarta" : "javax";
-    }
+    private final String importPrefix = "jakarta";
 
     @Override
-    public String addClassAnnotations(String tableName) {
-        return "@Entity\n" +
-                "@Table(name = \"" + tableName.toLowerCase() + "\")\n";
+    public String addClassAnnotations(String tableName, ClassDefinition classDefinition) {
+        StringBuilder annotations = new StringBuilder();
+        annotations.append("@Entity\n")
+            .append("@Table(\n")
+            .append("    name = \"").append(tableName.toLowerCase()).append("s").append("\"");
+
+        // Agregar restricciones únicas si existen
+        List<ColumnDefinition> uniqueColumns = getUniqueColumns(classDefinition);
+        if (!uniqueColumns.isEmpty()) {
+            annotations.append(",\n    uniqueConstraints = {\n");
+            annotations.append(uniqueColumns.stream()
+                .map(column -> "        @UniqueConstraint(name = \"uk_" + tableName.toLowerCase() + "s" + "_" + column.getColumnName() +
+                    "\", columnNames = {\"" + column.getColumnName() + "\"})")
+                .collect(Collectors.joining(",\n")));
+            annotations.append("\n    }");
+        }
+        annotations.append(")\n");
+
+        return annotations.toString();
     }
 
     @Override
@@ -24,10 +38,9 @@ public class JpaStrategy implements EntityStrategy {
 
         if (isPrimaryKey) {
             annotations.append("    @Id\n")
-                    .append("    @GeneratedValue(strategy = GenerationType.IDENTITY)\n")
-                    .append("    @Column(name = \"").append(column.getColumnName()).append("\")\n");
+                .append("    @GeneratedValue(strategy = GenerationType.IDENTITY)\n")
+                .append("    @Column(name = \"").append(column.getColumnName()).append("\")\n");
         } else if (foreignKey != null) {
-            // Convertir el RelationshipType a la anotación JPA correspondiente
             String relationshipAnnotation = switch (foreignKey.getRelationshipType()) {
                 case ONE_TO_ONE -> "@OneToOne";
                 case ONE_TO_MANY -> "@OneToMany";
@@ -35,27 +48,20 @@ public class JpaStrategy implements EntityStrategy {
                 case MANY_TO_MANY -> "@ManyToMany";
             };
 
-            annotations.append("    ")
-                    .append(relationshipAnnotation)
-                    .append("(fetch = FetchType.")
-                    .append(foreignKey.getFetchStrategy());
+            annotations.append("    ").append(relationshipAnnotation)
+                .append("(fetch = FetchType.").append(foreignKey.getFetchStrategy());
 
-            // Agregar cascade si existe
             if (!foreignKey.getCascadeStrategies().isEmpty()) {
-                annotations.append(", cascade = {");
-                String cascades = foreignKey.getCascadeStrategies().stream()
+                annotations.append(", cascade = {")
+                    .append(foreignKey.getCascadeStrategies().stream()
                         .map(cascade -> "CascadeType." + cascade)
-                        .collect(Collectors.joining(", "));
-                annotations.append(cascades).append("}");
+                        .collect(Collectors.joining(", ")))
+                    .append("}");
             }
 
-            annotations.append(")\n");
-
-            annotations.append("    @JoinColumn(name = \"")
-                    .append(foreignKey.getColumnName())
-                    .append("\", nullable = ")
-                    .append(column.isNullable())
-                    .append(")\n");
+            annotations.append(")\n")
+                .append("    @JoinColumn(name = \"").append(foreignKey.getColumnName())
+                .append("\", nullable = ").append(column.isNullable()).append(")\n");
         } else {
             annotations.append("    @Column(name = \"").append(column.getColumnName()).append("\"");
 
@@ -64,9 +70,6 @@ public class JpaStrategy implements EntityStrategy {
             }
             if (!column.isNullable()) {
                 annotations.append(", nullable = false");
-            }
-            if (column.isUnique()) {
-                annotations.append(", unique = true");
             }
 
             annotations.append(")\n");
@@ -78,23 +81,15 @@ public class JpaStrategy implements EntityStrategy {
     @Override
     public String addImports() {
         return String.format("""
-            import %s.persistence.Entity;
-            import %s.persistence.Table;
-            import %s.persistence.Column;
-            import %s.persistence.Id;
-            import %s.persistence.GeneratedValue;
-            import %s.persistence.GenerationType;
-            import %s.persistence.OneToOne;
-            import %s.persistence.OneToMany;
-            import %s.persistence.ManyToOne;
-            import %s.persistence.ManyToMany;
-            import %s.persistence.JoinColumn;
-            import %s.persistence.FetchType;
-            import %s.persistence.CascadeType;
-            """,
-                importPrefix, importPrefix, importPrefix, importPrefix,
-                importPrefix, importPrefix, importPrefix, importPrefix,
-                importPrefix, importPrefix, importPrefix, importPrefix,
-                importPrefix);
+                import %s.persistence.*;
+                """,
+            importPrefix);
+    }
+
+    private List<ColumnDefinition> getUniqueColumns(ClassDefinition classDefinition) {
+        // Usar los atributos únicos directamente desde el classDefinition proporcionado
+        return classDefinition.getAttributes().stream()
+            .filter(ColumnDefinition::isUnique)
+            .collect(Collectors.toList());
     }
 }

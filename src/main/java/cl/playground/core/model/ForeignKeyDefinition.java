@@ -1,11 +1,9 @@
 package cl.playground.core.model;
 
-import cl.playground.core.strategy.Definition;
-
 import java.util.ArrayList;
 import java.util.List;
 
-public class ForeignKeyDefinition implements Definition {
+public class ForeignKeyDefinition {
     private final String columnName;
     private final String referenceTableName;
     private final String referenceColumnName;
@@ -53,7 +51,6 @@ public class ForeignKeyDefinition implements Definition {
     }
 
     // Getters
-    @Override
     public String getColumnName() {
         return columnName;
     }
@@ -76,5 +73,17 @@ public class ForeignKeyDefinition implements Definition {
 
     public RelationshipType getRelationshipType() {
         return relationshipType;
+    }
+
+    @Override
+    public String toString() {
+        return "ForeignKeyDefinition{" +
+            "columnName='" + columnName + '\'' +
+            ", referenceTableName='" + referenceTableName + '\'' +
+            ", referenceColumnName='" + referenceColumnName + '\'' +
+            ", fetchStrategy=" + fetchStrategy +
+            ", cascadeStrategies=" + cascadeStrategies +
+            ", relationshipType=" + relationshipType +
+            '}';
     }
 }
