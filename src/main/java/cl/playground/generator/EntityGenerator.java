@@ -30,9 +30,9 @@ public class EntityGenerator {
 
             System.out.println("Clases definidas a partir del SQL: " + classDefinitions.keySet());
 
-            // Generar cada clase
+            // Generar cada clase - AQUÍ ESTÁ EL CAMBIO
             for (ClassDefinition classDefinition : classDefinitions.values()) {
-                EntityBuilder builder = new EntityBuilder(strategies);
+                EntityBuilder builder = new EntityBuilder(strategies, classDefinitions); // Modificado
                 String classContent = builder
                     .withClassDefinition(classDefinition)
                     .build();

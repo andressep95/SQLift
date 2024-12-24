@@ -6,14 +6,16 @@ import cl.playground.core.model.ForeignKeyDefinition;
 import cl.playground.core.strategy.EntityStrategy;
 
 import java.util.List;
-import java.util.ArrayList;
+import java.util.Map;
 
 public class EntityBuilder {
     private final List<EntityStrategy> strategies;
+    private final Map<String, ClassDefinition> allClassDefinitions;
     private ClassDefinition classDefinition;
 
-    public EntityBuilder(List<EntityStrategy> strategies) {
+    public EntityBuilder(List<EntityStrategy> strategies, Map<String, ClassDefinition> allClassDefinitions) {
         this.strategies = strategies;
+        this.allClassDefinitions = allClassDefinitions;
     }
 
     public EntityBuilder withClassDefinition(ClassDefinition classDefinition) {
@@ -184,7 +186,7 @@ public class EntityBuilder {
 
     private String mapDataType(String sqlType) {
         return switch (sqlType.toUpperCase()) {
-            case "SERIAL" -> "Long";
+            case "SERIAL", "BIGINT" -> "Long";
             case "VARCHAR" -> "String";
             case "INTEGER", "INT" -> "Integer";
             case "NUMERIC" -> "java.math.BigDecimal";
@@ -367,20 +369,62 @@ public class EntityBuilder {
     }
 
     private void buildRegularEntity(StringBuilder entity) {
-        // ID simple
+        // Generar clave primaria
         if (!classDefinition.getPrimaryKeyColumns().isEmpty()) {
             ColumnDefinition primaryKey = classDefinition.getPrimaryKeyColumns().get(0);
             addRegularEntityPrimaryKey(entity, primaryKey);
         }
 
-        // Campos normales
+        // Generar campos normales
         for (ColumnDefinition column : classDefinition.getAttributes()) {
             addRegularEntityField(entity, column);
         }
 
+        // Agregar relaciones inversas
+        addInverseRelationships(entity);
+
         // Constructores y métodos
         addRegularEntityConstructors(entity);
         addRegularEntityGettersAndSetters(entity);
+    }
+
+
+    private void addInverseRelationships(StringBuilder entity) {
+        String currentClassName = classDefinition.getClassName().toLowerCase();
+
+        // Identificar clases que referencian a esta clase
+        for (ClassDefinition otherClass : allClassDefinitions.values()) {
+            if (otherClass.getClassName().equals(classDefinition.getClassName())) {
+                continue; // No agregar relación a sí misma
+            }
+
+            boolean hasRelationToThis = otherClass.getForeignKeys().stream()
+                .anyMatch(fk -> fk.getReferenceTableName().equals(toSnakeCase(classDefinition.getClassName())));
+
+            if (hasRelationToThis) {
+                String otherClassName = otherClass.getClassName();
+                String fieldName = toCamelCase(toPlural(otherClassName.toLowerCase()));
+
+                // Generar campo con @OneToMany
+                entity.append("    @OneToMany(\n")
+                    .append("        mappedBy = \"").append(toCamelCase(currentClassName)).append("\",\n")
+                    .append("        cascade = CascadeType.ALL,\n")
+                    .append("        orphanRemoval = true\n")
+                    .append("    )\n")
+                    .append("    private Set<").append(otherClassName).append("> ")
+                    .append(fieldName).append(";\n\n");
+            }
+        }
+    }
+
+    private String toPlural(String singular) {
+        if (singular.endsWith("s")) {
+            return singular + "es";
+        } else if (singular.endsWith("y")) {
+            return singular.substring(0, singular.length() - 1) + "ies";
+        } else {
+            return singular + "s";
+        }
     }
 
     private void addRegularEntityField(StringBuilder entity, ColumnDefinition column) {
@@ -389,9 +433,6 @@ public class EntityBuilder {
 
         if (!column.isNullable()) {
             entity.append(",\n        nullable = false");
-        }
-        if (column.isUnique()) {
-            entity.append(",\n        unique = true");
         }
 
         entity.append("\n    )\n");
@@ -543,5 +584,25 @@ public class EntityBuilder {
                 .append("        this.").append(fieldName).append(" = ").append(fieldName).append(";\n")
                 .append("    }\n\n");
         }
+
+        // En el método addRegularEntityGettersAndSetters
+        allClassDefinitions.values().stream()
+            .filter(otherClass -> !otherClass.getClassName().equals(classDefinition.getClassName()))
+            .filter(otherClass -> otherClass.getForeignKeys().stream()
+                .anyMatch(fk -> fk.getReferenceTableName().equals(toSnakeCase(classDefinition.getClassName()))))
+            .forEach(otherClass -> {
+                String otherClassName = otherClass.getClassName();
+                String fieldName = toCamelCase(toPlural(otherClassName.toLowerCase()));
+                String capitalizedField = capitalize(fieldName);
+
+                entity.append("    public Set<").append(otherClassName).append("> get")
+                    .append(capitalizedField).append("() {\n")
+                    .append("        return ").append(fieldName).append(";\n")
+                    .append("    }\n\n")
+                    .append("    public void set").append(capitalizedField).append("(Set<")
+                    .append(otherClassName).append("> ").append(fieldName).append(") {\n")
+                    .append("        this.").append(fieldName).append(" = ").append(fieldName).append(";\n")
+                    .append("    }\n\n");
+            });
     }
 }
