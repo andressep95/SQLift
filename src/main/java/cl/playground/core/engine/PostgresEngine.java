@@ -78,7 +78,7 @@ public class PostgresEngine implements DatabaseEngine {
             tableDefinition.addColumn(column);
 
             if (constraints != null) {
-                identifyForeignKeys(constraints, columnName, tableDefinition);
+                identifyForeignKeys(columnsDefinition, tableDefinition);
             }
         }
 
@@ -103,17 +103,26 @@ public class PostgresEngine implements DatabaseEngine {
         }
     }
 
-    private void identifyForeignKeys(String constraints, String columnName, TableDefinition tableDefinition) {
-        Matcher fkMatcher = Pattern.compile("FOREIGN KEY\\s*\\(([^)]+)\\)\\s+REFERENCES\\s+(\\w+)\\s*\\((\\w+)\\)", Pattern.CASE_INSENSITIVE).matcher(constraints);
-        if (fkMatcher.find()) {
-            String referencedTableName = fkMatcher.group(2).toLowerCase();
-            String referencedColumnName = fkMatcher.group(3);
-            System.out.println("Clave foránea detectada en columna: " + columnName + ", referencia a: " + referencedTableName + "(" + referencedColumnName + ")");
+    private void identifyForeignKeys(String columnsDefinition, TableDefinition tableDefinition) {
+        // Patrón para capturar foreign keys definidas al final de la tabla
+        Pattern fkPattern = Pattern.compile(
+            "FOREIGN KEY\\s*\\(([^)]+)\\)\\s+REFERENCES\\s+(\\w+)\\s*\\(([^)]+)\\)(\\s+ON\\s+DELETE\\s+\\w+)?",
+            Pattern.CASE_INSENSITIVE
+                                           );
+
+        Matcher fkMatcher = fkPattern.matcher(columnsDefinition);
+        // Limpiar las foreign keys existentes para evitar duplicados
+        tableDefinition.getForeignKeys().clear();
+
+        while (fkMatcher.find()) {
+            String columnName = fkMatcher.group(1).trim();
+            String referencedTable = fkMatcher.group(2).toLowerCase();
+            String referencedColumn = fkMatcher.group(3).trim();
 
             ForeignKeyDefinition fk = new ForeignKeyDefinition(
                 columnName,
-                referencedTableName,
-                referencedColumnName
+                referencedTable,
+                referencedColumn
             );
             tableDefinition.addForeignKey(fk);
         }
